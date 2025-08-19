@@ -12,7 +12,9 @@ interface ScrapeResult {
   body: string;
 }
 
-async function scrape(scrapeUrl: string): Promise<ScrapeResult | undefined> {
+export async function scrape(
+  scrapeUrl: string
+): Promise<ScrapeResult | undefined> {
   const locatorTweet = "div.tweet-content.media-body";
   const locatorGeneric = "body";
   let pageData: ScrapeResult;
@@ -69,6 +71,10 @@ async function scrapeWithAxios(url: string): Promise<ScrapeResult> {
     }
 
     console.log("--- SCRAPED WITH AXIOS ---");
+    const randTime: number = Math.random() * (5000 - 1000) + 1000;
+    setTimeout(() => {
+      console.log("Please wait while we process your request.");
+    }, randTime);
     return { title, body: articleBody };
   } catch (error) {
     console.error("Error scraping the article:", error);
@@ -97,6 +103,9 @@ async function scrapeWithPlaywright(
     console.error("An error occurred:", error);
   } finally {
     const body = pageData.join(" ").trim();
+    const randTime = Math.random() * (5000 - 1000) + 1000;
+    await delay(randTime);
+
     return {
       title: "",
       body,
@@ -105,3 +114,7 @@ async function scrapeWithPlaywright(
 }
 
 scrape(scrapeUrl);
+
+export function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

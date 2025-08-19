@@ -1,5 +1,5 @@
 import * as dotenv from "dotenv";
-import {Exa} from "exa-js";
+import { Exa } from "exa-js";
 
 dotenv.config();
 
