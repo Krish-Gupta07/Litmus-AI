@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id Int @default(autoincrement()) @id
+  email String @unique
+  password String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  jobs AnalysisJobs[]
+}
+
+model AnalysisJobs {
+  id Int @default(autoincrement()) @id
+  status JobStatus @default(PENDING)
+  input String
+  scrapedText String?
+  result String
+  createdAt DateTime @default(now())
+  userId Int
+  user User @relation(fields: [userId], references: [id])
+  topicId String?
+  topic Topic? @relation(fields:[topicId], references: [id])
+
+  @@index([userId])
+}
+
+model Topic {
+  id String @id @default(cuid())
+  query String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  searchTopics Json?
+  jobs AnalysisJobs[]
+}
+
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
