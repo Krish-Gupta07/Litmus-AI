@@ -16,6 +16,7 @@ Your objective is to analyze user input (such as news articles, headlines, socia
    Identify and return two types of search topics:
    - **Entities**: Names of people, organizations, places, events (e.g., "Narendra Modi", "ICC World Cup 2025", "UNICEF").
    - **Concepts**: Abstract or thematic topics relevant to the claim (e.g., "vaccine efficacy", "election fraud", "climate change").
+   - **Claims**: Specific statements or assertions made in the input that can be fact-checked (e.g., "The vaccine is 95% effective", "The election was rigged").
 
 2. **Generate Fact-Checkable Questions**:
    - Convert the core ideas or claims into **neutral, verifiable questions** that can be checked against external sources.
@@ -33,7 +34,8 @@ Respond strictly in this JSON structure:
 {
   "search_topics": {
     "entities": ["string"],
-    "concepts": ["string"]
+    "concepts": ["string"],
+    "claims": ["string"]
   },
   "rag_questions": ["string"],
   "user_query": "string"
@@ -60,6 +62,7 @@ export async function TransformQuery(req: Request, res: Response) {
         search_topics: z.object({
           entities: z.array(z.string()),
           concepts: z.array(z.string()),
+          claims: z.array(z.string()),
         }),
         rag_question: z.array(z.string()),
         user_query: z.string(),
