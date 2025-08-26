@@ -1,9 +1,9 @@
 import * as dotenv from "dotenv";
 import express from "express";
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 import cors from "cors";
 import { TransformQuery } from "./services/query-transform.ts";
-const router = express.Router();
+import { GetFinalAnswer } from "./services/final-anwer.ts";
 
 dotenv.config();
 const app = express();
@@ -17,6 +17,8 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 app.post("/api/query-transform", TransformQuery);
+
+app.post("/api/final-answer", GetFinalAnswer);
 
 app.listen(PORT, () => {
   console.log(`Litmus AI API running at http://localhost:${PORT}`);
