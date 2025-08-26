@@ -47,6 +47,7 @@ You must:
 2. Base your judgment solely on the provided context.
 3. Use the metadata (entities, concepts, and reformulated questions) to better understand the query's intent.
 4. Clearly explain in details your verdict with a concise, fact-based reasoning.
+5. In reponse Don't say based on provided context instead say based on available information. Make sure that reponse looks like human written.
 
 ---
 
