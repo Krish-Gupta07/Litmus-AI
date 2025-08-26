@@ -55,7 +55,7 @@ You must:
 Return a JSON object in the following format:
 
 {
-  "verdict": "true | false | misleading | unverifiable | yes | no | maybe",  // One of these options based on your assessment
+  "title": "Give a proper brief title to the user query (based on the entity, context and basesd on your understanding)",  // One of these options based on your assessment
   "reasoning": "A clear, concise detailed explanation that explains the decision based strictly on the context provided. Use named entities, timeframes, or facts from the context to justify your conclusion."
 }
 
@@ -68,7 +68,7 @@ Return a JSON object in the following format:
 - Be neutral, fact-based, and professional.
 - Only output the JSON response. Do not include any other text.
 
----`;
+`;
 
 export async function GetFinalAnswer(req: Request, res: Response) {
   try {
@@ -113,15 +113,7 @@ export async function GetFinalAnswer(req: Request, res: Response) {
       system: SYSTEM_PROMPT,
       prompt: prompt,
       schema: z.object({
-        verdict: z.enum([
-          "true",
-          "false",
-          "misleading",
-          "unverifiable",
-          "yes",
-          "no",
-          "maybe",
-        ]),
+        title: z.string(),
         reasoning: z.string(),
       } as const),
     }).then((result) => result.object);
@@ -129,7 +121,7 @@ export async function GetFinalAnswer(req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       payload: {
-        title: response.verdict,
+        title: response.title,
         description: response.reasoning,
       },
     });
