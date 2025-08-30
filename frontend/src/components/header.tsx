@@ -1,16 +1,17 @@
 import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import { ModeToggle } from './common/theme-toggle';
-import { PlusIcon, UserIcon } from 'lucide-react';
+import { UserIcon } from 'lucide-react';
+import Link from 'next/link';
 
-interface Props {
-  onNewChat: () => void;
-}
+// interface Props {
+//   onNewChat: () => void;
+// }
 
-export default function Header({ onNewChat }: Props) {
+export default function Header() {
   return (
-    <header className="fixed top-0 h-16 w-full gap-4 space-x-4 p-4">
+    <header className="h-16 w-full gap-4 space-x-4 py-4">
       <div className="flex items-center justify-between">
-      <button
+        {/* <button
           onClick={onNewChat}
           className="bg-muted text-primary rounded-xl px-3 py-3 transition-all duration-300 hover:bg-muted/80 hover:px-4 flex items-center gap-1 overflow-hidden group"
           aria-label="Start a new chat"
@@ -19,13 +20,17 @@ export default function Header({ onNewChat }: Props) {
           <span className="w-0 opacity-0 transition-all duration-300 group-hover:w-8 group-hover:opacity-100 whitespace-nowrap text-sm">
             New
           </span>
-        </button>
+        </button> */}
+        <Link href="/" className="font-medium">
+          Litmus AI
+        </Link>
         <div className="flex items-center gap-2">
+          <ModeToggle />
           <SignedOut>
             <SignInButton>
-              <button className="bg-muted text-primary flex cursor-pointer items-center gap-2 rounded-2xl px-4 py-[11px] text-sm font-medium transition-colors duration-300">
+              <button className="bg-accent text-secondary flex cursor-pointer items-center gap-2 rounded-2xl px-4 py-[11px] text-sm font-medium transition-colors duration-300">
                 <UserIcon size={16} />
-                Log In
+                Sign In
               </button>
             </SignInButton>
             {/* <SignUpButton>
@@ -37,7 +42,6 @@ export default function Header({ onNewChat }: Props) {
           <SignedIn>
             <UserButton />
           </SignedIn>
-          <ModeToggle />
         </div>
       </div>
     </header>
