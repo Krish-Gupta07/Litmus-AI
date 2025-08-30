@@ -36,7 +36,7 @@ export default function RootLayout({
         baseTheme: shadcn,
       }}
     >
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} font-sans antialiased`}>
           <ThemeProvider
             attribute="class"

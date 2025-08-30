@@ -3,9 +3,9 @@
 import type React from 'react';
 
 import { useState, useRef, useEffect } from 'react';
-import { ArrowUp, Loader2 } from 'lucide-react';
+import { ArrowUp, InfoIcon, LinkIcon, Loader2, TypeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +29,7 @@ export default function ChatInput({
   const [message, setMessage] = useState('');
   const [cacheMode, setCacheMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [inputType, setInputType] = useState<'text' | 'url'>('text');
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -82,23 +83,53 @@ export default function ChatInput({
     <form
       onSubmit={handleSubmit}
       className={cn(
-        'bg-muted flex min-h-28 w-2xl max-w-full flex-col justify-between rounded-3xl p-6 ring ring-transparent ring-offset-0 transition-colors',
-        'focus-within:ring-ring',
+        'bg-muted flex min-h-28 max-w-full flex-col justify-between rounded-3xl p-6 ring ring-transparent ring-offset-0 transition-colors',
+        'focus-within:ring-transparent',
         disabled && 'opacity-50',
         className,
       )}
     >
       <div className="min-h-0 flex-1">
+        <h1 className="flex items-center gap-2 font-medium">
+          <TypeIcon size={16} className="text-accent" /> Analyze Content for Misinformation
+        </h1>
+        <div className="my-2 flex w-fit items-center gap-2 rounded-xl bg-primary-foreground p-1">
+          <button
+            className={cn(
+              'flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-colors duration-300',
+              inputType === 'text' && 'bg-secondary',
+            )}
+            onClick={() => setInputType('text')}
+          >
+            <TypeIcon size={16} /> Text
+          </button>
+          <button
+            className={cn(
+              'flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-colors duration-300',
+              inputType === 'url' && 'bg-secondary',
+            )}
+            onClick={() => setInputType('url')}
+          >
+            <LinkIcon size={16} /> URL
+          </button>
+        </div>
+        <p className="mb-2 text-sm">
+          {inputType === 'text' ? 'Enter text content to analyze' : 'Enter URL to analyze'}
+        </p>
         <textarea
           ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={
+            inputType === 'text'
+              ? 'Enter text content to analyze for misinformation'
+              : 'Enter URL to analyze for misinformation'
+          }
           disabled={disabled || isLoading}
           maxLength={maxLength}
           className={cn(
-            'text-foreground placeholder:text-muted-foreground w-full resize-none border-0 bg-transparent',
+            'text-foreground placeholder:text-muted-foreground w-full resize-none rounded-xl border-0 bg-primary-foreground p-4',
             'focus:ring-0 focus:outline-none',
             'text-sm leading-relaxed',
           )}
@@ -109,18 +140,19 @@ export default function ChatInput({
 
       <div className="mt-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Switch
-            id="thinking-mode"
+          <Checkbox
+            id="cache-mode"
             checked={cacheMode}
-            onCheckedChange={setCacheMode}
+            onCheckedChange={(checked) => setCacheMode(checked as boolean)}
             disabled={disabled || isLoading}
-            className="data-[state=checked]:bg-primary"
+            className="data-[state=checked]:!bg-accent data-[state=checked]:!border-accent"
           />
           <Label
             htmlFor="cache-mode"
             className="text-muted-foreground cursor-pointer text-xs select-none"
           >
-            Cache Mode
+            Use cached results
+            <InfoIcon size={16} className="text-muted-foreground" />
           </Label>
         </div>
 
@@ -138,17 +170,16 @@ export default function ChatInput({
 
           <Button
             type="submit"
-            size="icon"
             disabled={!canSend}
             className={cn(
-              'size-10 rounded-full transition-all duration-200',
+              'rounded-xl transition-all duration-200',
               canSend
-                ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg'
+                ? 'bg-accent hover:bg-accent/90 text-primary-foreground shadow-md hover:shadow-lg'
                 : 'bg-muted-foreground/20 text-muted-foreground cursor-not-allowed',
             )}
             aria-label="Send message"
           >
-            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <ArrowUp size={18} />}
+            {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'Analyze Content'}
           </Button>
         </div>
       </div>
