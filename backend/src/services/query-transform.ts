@@ -50,30 +50,36 @@ Respond strictly in this JSON structure:
 - Avoid yes/no phrasing unless it's part of a complete, fact-checkable statement.
 `;
 
+// Core AI function that can be used by both API and queue worker
+export async function transformQueryAI(messages: any[]) {
+  const result = await generateObject({
+    model: model,
+    system: SYSTEM_PROMPT,
+    messages: convertToModelMessages(messages),
+    schema: z.object({
+      search_topics: z.object({
+        entities: z.array(z.string()),
+        concepts: z.array(z.string()),
+        claims: z.array(z.string()),
+      }),
+      rag_question: z.array(z.string()),
+      user_query: z.string(),
+    }),
+  });
+
+  console.log("Generated result:", result.object);
+  return result.object;
+}
+
+// Express route handler
 export async function TransformQuery(req: Request, res: Response) {
   try {
     const { messages }: { messages: any } = req.body;
-
-    const result = await generateObject({
-      model: model,
-      system: SYSTEM_PROMPT,
-      messages: convertToModelMessages(messages),
-      schema: z.object({
-        search_topics: z.object({
-          entities: z.array(z.string()),
-          concepts: z.array(z.string()),
-          claims: z.array(z.string()),
-        }),
-        rag_question: z.array(z.string()),
-        user_query: z.string(),
-      }),
-    });
-
-    console.log("Generated result:", result.object);
+    const result = await transformQueryAI(messages);
 
     return res.status(200).json({
       success: true,
-      data: result.object,
+      data: result,
     });
   } catch (error) {
     console.error("Error in POST handler:", error);

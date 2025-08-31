@@ -71,66 +71,45 @@ Return a JSON object in the following format:
 
 `;
 
+// Core AI function that can be used by both API and queue worker
+export async function getFinalAnswerAI(transformedQuery: any, contextData: string[] = []) {
+  // Combine transformedQuery and contextData to create the prompt as a string
+  const prompt = `Query Metadata: ${JSON.stringify(
+    transformedQuery
+  )} Context Data: ${contextData.join(", ")}`;
+  console.log("Final Prompt:", prompt);
+
+  const response = await generateObject({
+    model: model,
+    system: SYSTEM_PROMPT,
+    prompt: prompt,
+    schema: z.object({
+      title: z.string(),
+      reasoning: z.string(),
+    } as const),
+  }).then((result) => result.object);
+
+  return {
+    title: response.title,
+    description: response.reasoning,
+  };
+}
+
+// Express route handler
 export async function GetFinalAnswer(req: Request, res: Response) {
   try {
-    // const { messages }: { messages: any } = req.body;
-
-    // Forward the request to the TransformQuery endpoint
-    // const transformResponse = await axios.post(
-    //   "http://localhost:4000/api/query-transform",
-    //   { messages }
-    // );
-
-    // Stored transformed query
-    const transformedQuery = {
-      search_topics: {
-        entities: ["United States", "China"],
-        concepts: ["trade war", "economic sanctions"],
-        claims: [
-          "The United States and China are currently in a full-scale trade war.",
-        ],
-      },
-      rag_question: [
-        "Are the United States and China currently engaged in a trade war?",
-      ],
-      user_query:
-        "Is there an ongoing trade war between the US and China right now?",
-    };
-
-    const contextData = [
-      "As of August 2025, trade tensions between the U.S. and China have significantly eased.",
-      "While both countries maintain some tariffs, they have signed a new economic cooperation agreement in early 2025.",
-      "There are no new sanctions or aggressive economic measures being taken by either side currently.",
-    ]; // This should be replaced with actual retrieved context data;
-
-    // Combine transformedQuery and contextData to create the prompt as a string
-    const prompt = `Query Metadata: ${JSON.stringify(
-      transformedQuery
-    )} Context Data: ${contextData.join(", ")}`;
-    console.log("Final Prompt:", prompt);
-
-    const response = await generateObject({
-      model: model,
-      system: SYSTEM_PROMPT,
-      prompt: prompt,
-      schema: z.object({
-        title: z.string(),
-        reasoning: z.string(),
-      } as const),
-    }).then((result) => result.object);
+    const { transformedQuery, contextData = [] } = req.body;
+    const result = await getFinalAnswerAI(transformedQuery, contextData);
 
     return res.status(200).json({
       success: true,
-      payload: {
-        title: response.title,
-        description: response.reasoning,
-      },
+      payload: result,
     });
   } catch (error) {
     console.error("Error in /final-answer route:", error);
     return res.status(500).json({
       status: "failure",
-      message: "Internel server error",
+      message: "Internal server error",
     });
   }
 }

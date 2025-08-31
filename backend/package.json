@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.ts"
+    "start": "node src/index.ts",
+    "dev": "ts-node --esm src/index.ts",
+    "build": "tsc",
+    "queue:worker": "ts-node --esm src/workers/analysis.worker.ts"
   },
   "keywords": [],
   "author": "",
@@ -20,13 +23,16 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.6",
+    "@prisma/client": "^6.14.0",
     "ai": "^5.0.15",
     "axios": "^1.11.0",
+    "bullmq": "^5.58.4",
     "cheerio": "^1.1.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "exa-js": "^1.8.27",
     "express": "^5.1.0",
+    "ioredis": "^5.7.0",
     "langchain": "^0.3.30",
     "pg": "^8.16.3",
     "playwright": "^1.54.2",
