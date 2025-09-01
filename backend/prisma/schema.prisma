@@ -7,39 +7,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id Int @default(autoincrement()) @id
-  email String @unique
-  password String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  jobs AnalysisJobs[]
+
+enum Category {
+  POLITICS_GOVERNANCE
+  CONFLICT_SECURITY
+  BUSINESS_ECONOMY
+  TECHNOLOGY
+  SCIENCE
+  HEALTH_WELLNESS
+  ENVIRONMENT_CLIMATE
+  SPORTS
+  ARTS_CULTURE
+  SOCIETY_HUMAN_INTEREST
+  OTHER
 }
 
-model AnalysisJobs {
-  id Int @default(autoincrement()) @id
-  status JobStatus @default(PENDING)
-  input String
-  scrapedText String?
-  result String
-  createdAt DateTime @default(now())
-  userId Int
-  user User @relation(fields: [userId], references: [id])
-  topicId String?
-  topic Topic? @relation(fields:[topicId], references: [id])
+model User {
+  id        String        @id 
+  email     String        @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  jobs      AnalysisJob[]
+}
+
+model AnalysisJob {
+  id          String    @id @default(cuid())
+  status      JobStatus @default(PENDING)
+  input       String    @db.Text
+  category    Category? 
+  result      Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
 
-model Topic {
-  id String @id @default(cuid())
-  query String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  searchTopics Json?
-  jobs AnalysisJobs[]
-}
 
+model SourceContent {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  rawText     String   @db.Text
+  reliability Float
+  scrapedAt   DateTime @default(now())
+  
+  category    Category
+
+  @@index([category])
+}
 
 enum JobStatus {
   PENDING
