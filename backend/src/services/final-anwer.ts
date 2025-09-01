@@ -1,7 +1,10 @@
-import type { Request, Response } from "express";
 import { generateObject } from "ai";
-import { google } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
+
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_API_KEY!,
+});
 
 const model = google("gemini-2.5-flash");
 
@@ -24,6 +27,7 @@ You will receive two inputs:
     },
     "rag_question": [String],  // Reformulated fact-checkable versions of the user's query
     "user_query": "String"     // Original user query
+    "category": "String"       // Category of the information in the query
 }
 
 ### 2. Context Data:
@@ -71,45 +75,45 @@ Return a JSON object in the following format:
 
 `;
 
-// Core AI function that can be used by both API and queue worker
-export async function getFinalAnswerAI(transformedQuery: any, contextData: string[] = []) {
-  // Combine transformedQuery and contextData to create the prompt as a string
-  const prompt = `Query Metadata: ${JSON.stringify(
-    transformedQuery
-  )} Context Data: ${contextData.join(", ")}`;
-  console.log("Final Prompt:", prompt);
+export async function getFinalAnswer(
+  transformedQuery?: any,
+  contextData?: string[]
+) {
+  try {
+    const queryData = transformedQuery;
+    const contextInfo = contextData!;
+    const prompt = `Query Metadata: ${JSON.stringify(
+      queryData
+    )} Context Data: ${contextInfo.join(", ")}`;
+    console.log("Final Prompt:", prompt);
 
-  const response = await generateObject({
-    model: model,
-    system: SYSTEM_PROMPT,
-    prompt: prompt,
-    schema: z.object({
+    const ResponseSchema = z.object({
       title: z.string(),
       reasoning: z.string(),
-    } as const),
-  }).then((result) => result.object);
-
-  return {
-    title: response.title,
-    description: response.reasoning,
-  };
-}
-
-// Express route handler
-export async function GetFinalAnswer(req: Request, res: Response) {
-  try {
-    const { transformedQuery, contextData = [] } = req.body;
-    const result = await getFinalAnswerAI(transformedQuery, contextData);
-
-    return res.status(200).json({
-      success: true,
-      payload: result,
     });
+
+    const response = await generateObject({
+      model: model,
+      system: SYSTEM_PROMPT,
+      prompt: prompt,
+      schema: ResponseSchema as any,
+    }).then((result) => result.object);
+
+    const result = {
+      success: true,
+      payload: {
+        title: response.title,
+        description: response.reasoning,
+      },
+    };
+
+    console.log("Final Answer Result:", result);
+    return result;
   } catch (error) {
-    console.error("Error in /final-answer route:", error);
-    return res.status(500).json({
+    console.error("Error in GetFinalAnswer:", error);
+    return {
       status: "failure",
       message: "Internal server error",
-    });
+    };
   }
 }
