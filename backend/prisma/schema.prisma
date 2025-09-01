@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
+// A strict list of all possible content categories.
 enum Category {
   POLITICS_GOVERNANCE
   CONFLICT_SECURITY
@@ -22,45 +22,37 @@ enum Category {
   OTHER
 }
 
-model User {
-  id        String        @id 
-  email     String        @unique
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  jobs      AnalysisJob[]
-}
-
-model AnalysisJob {
-  id          String    @id @default(cuid())
-  status      JobStatus @default(PENDING)
-  input       String    @db.Text
-  category    Category? 
-  result      Json?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-}
-
-
-model SourceContent {
-  id          String   @id @default(cuid())
-  url         String   @unique
-  rawText     String   @db.Text
-  reliability Float
-  scrapedAt   DateTime @default(now())
-  
-  category    Category
-
-  @@index([category])
-}
-
+// A strict list of possible job statuses.
 enum JobStatus {
   PENDING
   RUNNING
   COMPLETED
   FAILED
+}
+
+// Represents a user authenticated via Clerk.
+model User {
+  id        String        @id // Clerk User ID
+  email     String        @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  jobs      AnalysisJob[]
+}
+
+// Represents a single analysis request, its status, and its final result.
+// This table now serves as your primary data store AND your cache.
+model AnalysisJob {
+  id          String    @id @default(cuid())
+  status      JobStatus @default(PENDING)
+  input       String    @db.Text
+  category    Category?
+  result      Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([category])
 }
