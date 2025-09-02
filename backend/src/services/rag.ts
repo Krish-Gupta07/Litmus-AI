@@ -28,36 +28,17 @@ export async function chunk(data: string[]) {
 export async function embedData(texts: string[]) {
   let embeddings: number[][] = [];
 
-  if (texts.length > 100) {
-    let i = 100;
-    while (i <= texts.length) {
-      let newTexts = texts.slice(i - 100, i);
-      // console.log(newTexts);
-      i += 100;
-      const { embeddings: textEmbedding } = await embedMany({
-        model: model,
-        values: newTexts,
-        providerOptions: {
-          gemini: {
-            dimensions: 3072,
-          },
-        },
-      });
-      embeddings.push(...textEmbedding);
-    }
-  } else {
+  for (let i = 0; i < texts.length; i += 100) {
+    const batch = texts.slice(i, i + 100);
     const { embeddings: textEmbedding } = await embedMany({
-      model: model,
-      values: texts,
+      model,
+      values: batch,
       providerOptions: {
-        gemini: {
-          dimensions: 3072,
-        },
+        gemini: { dimensions: 3072 },
       },
     });
-    embeddings = textEmbedding;
+    embeddings.push(...textEmbedding);
   }
-
   return embeddings;
 }
 

@@ -4,9 +4,9 @@ export type TransformedQuery = {
     concepts: string[];
     claims: string[];
   };
-  ragQuestion: "string";
-  userQuery: "string";
-  category: "string";
+  ragQuestion: string;
+  userQuery: string;
+  category: string;
 };
 
 export type RecordType = {
