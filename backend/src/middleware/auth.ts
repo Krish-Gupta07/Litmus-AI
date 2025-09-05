@@ -80,15 +80,9 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
       return next(); // Continue without user info
     }
 
-    const userIdNum = parseInt(userId as string);
-    
-    if (isNaN(userIdNum)) {
-      return next(); // Continue without user info
-    }
-
     // Check if user exists in database
     const user = await prisma.user.findUnique({
-      where: { id: userIdNum },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -153,7 +147,7 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
 
     // Check if user is admin (you can add an isAdmin field to your User model)
     // For now, we'll use a simple check - you can modify this based on your needs
-    const isAdmin = req.user?.email?.includes('admin') || req.user?.id === 1;
+    const isAdmin = Boolean(req.user?.email?.includes('admin'));
     
     if (!isAdmin) {
       return res.status(403).json({
