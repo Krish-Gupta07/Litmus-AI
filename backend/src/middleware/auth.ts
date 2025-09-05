@@ -8,7 +8,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
-        id: number;
+        id: string;
         email: string;
       };
     }
@@ -31,18 +31,17 @@ export async function authenticateUser(req: Request, res: Response, next: NextFu
       });
     }
 
-    const userIdNum = parseInt(userId as string);
-    
-    if (isNaN(userIdNum)) {
+    if (typeof userId !== 'string') {
       return res.status(400).json({
         success: false,
         error: 'Invalid user ID format',
+        message: 'Clerk user ID must be a string',
       });
     }
-
+    
     // Check if user exists in database
     const user = await prisma.user.findUnique({
-      where: { id: userIdNum },
+      where: { id: userId },
       select: {
         id: true,
         email: true,

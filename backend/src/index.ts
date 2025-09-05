@@ -5,8 +5,9 @@ import cors from "cors";
 import { transformQuery } from "./services/query-transform.js";
 import { getFinalAnswer } from "./services/final-anwer.js";
 import { QueueService } from "./services/queue.js";
-import analysisRoutes from "./routes/analysis.routes.js";
+// import analysisRoutes from "./routes/analysis.routes.js";
 import { authenticateUser, rateLimit } from "./middleware/auth.js";
+import webhookRoutes from "./routes/webhooks.routes.js";
 
 dotenv.config();
 const app = express();
@@ -31,7 +32,10 @@ app.post("/api/query-transform", transformQuery);
 // app.post("/api/final-answer", getFinalAnswer);
 
 // New queue-based analysis routes
-app.use("/api/analysis", analysisRoutes);
+// app.use("/api/analysis", analysisRoutes);
+
+// webhook routes
+app.use("/api/webhooks", webhookRoutes);
 
 // Queue management endpoints (admin only)
 app.get(
@@ -80,13 +84,13 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
 });
 
 // 404 handler
-app.use("*", (req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    error: "Endpoint not found",
-    path: req.originalUrl,
-  });
-});
+// app.use("*", (req: Request, res: Response) => {
+//   res.status(404).json({
+//     success: false,
+//     error: "Endpoint not found",
+//     path: req.originalUrl,
+//   });
+// });
 
 // Start server
 app.listen(PORT, () => {
