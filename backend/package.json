@@ -7,7 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.ts",
-    "dev": "ts-node --esm src/index.ts",
+    "dev": "tsx src/index.ts",
     "build": "tsc",
     "queue:worker": "ts-node --esm src/workers/analysis.worker.ts"
   },
@@ -19,10 +19,12 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.6",
+    "@clerk/nextjs": "^6.31.9",
     "@pinecone-database/pinecone": "^6.1.2",
     "@prisma/client": "^6.14.0",
     "ai": "^5.0.15",
@@ -38,6 +40,7 @@
     "pg": "^8.16.3",
     "playwright": "^1.54.2",
     "prisma": "^6.14.0",
+    "svix": "^1.76.1",
     "zod": "^3.25.76"
   }
 }
