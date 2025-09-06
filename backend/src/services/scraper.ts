@@ -1,11 +1,21 @@
 import axios from "axios";
+import * as dotenv from "dotenv";
+import { Exa } from "exa-js";
 import * as cheerio from "cheerio";
 import { chromium } from "playwright";
 import type { Page } from "playwright";
 import { BROWSER_HEADERS } from "../lib/constants.js";
 
-const scrapeUrl =
-  "https://www.republicworld.com/cricket/daava-hai-nahi-hoga-ex-csk-star-recalls-operation-sindoor-claims-india-vs-pakistan-asia-cup-2025-match-will-not-happen";
+dotenv.config();
+
+const EXA_API_KEY: string | undefined = process.env.EXA_API_KEY;
+if (!EXA_API_KEY) {
+  throw new Error("Missing EXA_API_KEY. Please set it in your environment.");
+}
+
+const exa = new Exa(EXA_API_KEY);
+
+const scrapeUrl = "https://x.com/fardeentwt/status/1963624881959911917";
 
 interface ScrapeResult {
   title: string;
@@ -15,9 +25,9 @@ interface ScrapeResult {
 export async function scrape(
   scrapeUrl: string
 ): Promise<ScrapeResult | undefined> {
-  const locatorTweet = "div.tweet-content.media-body";
+  const locatorTweet = ".tweet-content";
   const locatorGeneric = "body";
-  let pageData: ScrapeResult;
+
   const possibleTwtUrls = [
     "https://x.com",
     "https://twitter.com",
@@ -25,28 +35,73 @@ export async function scrape(
     "https://mobile.x.com",
   ];
 
+  function isValidScrape(data: ScrapeResult, minLength = 10): boolean {
+    // -> Function to check if the return output is a valid scrape or not
+    return Boolean(data?.body && data.body.trim().length >= minLength);
+  }
+
   try {
-    const isTwtUrl = possibleTwtUrls.some((url) => scrapeUrl.startsWith(url));
+    const isTwitterUrl = possibleTwtUrls.some((url) =>
+      scrapeUrl.startsWith(url)
+    );
 
-    if (isTwtUrl) {
-      const twtId = scrapeUrl.split("/").slice(3).join("/"); // slices the url contents after the domain
-
-      pageData = await scrapeWithPlaywright(
-        `https://nitter.net/${twtId}`,
-        locatorTweet
-      );
-    } else {
-      pageData = await scrapeWithAxios(scrapeUrl);
-
-      if (pageData.body.length < 50) {
-        pageData = await scrapeWithPlaywright(scrapeUrl, locatorGeneric);
+    if (isTwitterUrl) {
+      // --- Twitter case ---
+      const twtId = scrapeUrl.split("/").slice(3).join("/");
+      try {
+        const pageData: ScrapeResult = await scrapeWithPlaywright(
+          `https://nitter.net/${twtId}`,
+          locatorTweet
+        );
+        if (isValidScrape(pageData, 20)) {
+          console.log("Scraped Twitter via Nitter");
+          return pageData;
+        }
+        console.warn("Nitter returned empty/short body");
+      } catch (err) {
+        console.error("Twitter scrape failed:", err);
       }
-    }
+      return undefined; // Twitter has no further fallback
+    } else {
+      // --- Generic website case ---
+      try {
+        const axiosData = await scrapeWithAxios(scrapeUrl);
+        if (isValidScrape(axiosData)) {
+          console.log("Scraped successfully with Axios");
+          return axiosData;
+        }
+        console.warn("Axios invalid, trying Exa...");
+      } catch (err) {
+        console.warn("Axios failed:", err);
+      }
 
-    console.log("Scraped data:", pageData);
-    return pageData;
+      try {
+        const exaData = await scrapeWithExa(scrapeUrl);
+        if (isValidScrape(exaData)) {
+          console.log("Scraped successfully with Exa");
+          return exaData;
+        }
+        console.warn("Exa invalid, trying Playwright...");
+      } catch (err) {
+        console.warn("Exa failed:", err);
+      }
+
+      try {
+        const pwData = await scrapeWithPlaywright(scrapeUrl, locatorGeneric);
+        if (isValidScrape(pwData)) {
+          console.log("Scraped successfully with Playwright");
+          return pwData;
+        }
+        console.warn("Playwright invalid");
+      } catch (err) {
+        console.error("Playwright failed:", err);
+      }
+
+      console.error("All scraping methods failed");
+      return undefined;
+    }
   } catch (err) {
-    console.warn("Axios failed, falling back to Playwright:", err);
+    console.error("Unexpected scrape error:", err);
     return undefined;
   }
 }
@@ -55,66 +110,82 @@ async function scrapeWithAxios(url: string): Promise<ScrapeResult> {
   let title = "";
   let articleBody = "";
 
-  try {
-    const response = await axios.get(url, {
-      headers: BROWSER_HEADERS,
-    });
+  const response = await axios.get(url, {
+    headers: BROWSER_HEADERS,
+    timeout: 10_000,
+    maxRedirects: 5,
+    validateStatus: (s) => s >= 200 && s < 400,
+  });
 
-    const html: string = response.data;
-    const $ = cheerio.load(html);
-    $("script, style, noscript, svg, footer, header, nav").remove();
-    title = $("h1").text().trim();
-    articleBody = $("body").text().trim().replace(/\s+/g, " ");
+  const html: string = response.data;
+  const $ = cheerio.load(html);
+  $("script, style, noscript, svg, footer, header, nav").remove();
+  title = $("title").text().trim() || $("h1").first().text().trim();
+  articleBody = $("body").text().trim().replace(/\s+/g, " ");
 
-    if (!articleBody || articleBody.length < 50) {
-      throw new Error("Axios/cheerio scraping returned empty or invalid body");
-    }
-
-    console.log("--- SCRAPED WITH AXIOS ---");
-    const randTime: number = Math.random() * (5000 - 1000) + 1000;
-    setTimeout(() => {
-      console.log("Please wait while we process your request.");
-    }, randTime);
-    return { title, body: articleBody };
-  } catch (error) {
-    console.error("Error scraping the article:", error);
-    return { title: "Error", body: "Failed to scrape with Axios" };
+  if (!articleBody || articleBody.length < 50) {
+    throw new Error("Axios/cheerio scraping returned empty or invalid body");
   }
+
+  console.log("--- SCRAPED WITH AXIOS ---");
+  const randTime: number = Math.random() * (5000 - 1000) + 1000;
+  await delay(randTime);
+  console.log("Please wait while we process your request.");
+
+  return { title, body: articleBody };
+}
+
+async function scrapeWithExa(url: string): Promise<ScrapeResult> {
+  const result = await exa.getContents([url], {
+    text: true,
+    context: true,
+  });
+  const data = result.results?.[0]?.text ?? "";
+  const cleanData = data
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[#/\\]+/g, " ");
+
+  if (!cleanData || cleanData.length < 50) {
+    throw new Error("Exa scraping returned empty or invalid body");
+  }
+  const randTime: number = Math.random() * (5000 - 1000) + 1000;
+  await delay(randTime);
+  return { title: "", body: cleanData };
 }
 
 async function scrapeWithPlaywright(
   url: string,
   locatorVar: string
 ): Promise<ScrapeResult> {
-  let pageData: string[] = [];
-
+  const browser = await chromium.launch({ headless: false });
   try {
-    const browser = await chromium.launch({ headless: false, timeout: 8000 });
     const context = await browser.newContext();
     const page: Page = await context.newPage();
 
-    await page.goto(url);
-    await page.waitForLoadState("domcontentloaded");
-    pageData = await page.locator(locatorVar).allInnerTexts();
-    await browser.close();
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector(locatorVar, {
+      state: "visible",
+      timeout: 10000,
+    });
+
+    const pageData = await page.locator(locatorVar).allInnerTexts();
+    const body = pageData.join("\n\n").trim();
+
+    if (!body || body.length < 20) {
+      throw new Error("Playwright scraping returned empty or invalid body");
+    }
 
     console.log("--- SCRAPED WITH PLAYWRIGHT ---");
-  } catch (error) {
-    console.error("An error occurred:", error);
+    console.log(body);
+    return { title: "", body };
   } finally {
-    const body = pageData.join(" ").trim();
-    const randTime = Math.random() * (5000 - 1000) + 1000;
-    await delay(randTime);
-
-    return {
-      title: "",
-      body,
-    };
+    await browser.close();
   }
 }
-
-scrape(scrapeUrl);
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+scrape(scrapeUrl);

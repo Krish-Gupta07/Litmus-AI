@@ -18,29 +18,38 @@ export async function runExa(searchData: TransformedQuery): Promise<any[]> {
   const allResults: any[] = [];
 
   for (let i = 0, j = 0; i < 2 && j < 2; i++, j++) {
+    if (!entities[i] || !concepts[j]) continue;
+    const query = `${entities[i]} ${concepts[j]}`;
     console.log(searchData.searchTopics.entities[i]);
-    const result = await exa.searchAndContents(
-      `${entities[i]} ${concepts[j]}`,
-      {
+    try {
+      const result = await exa.searchAndContents(query, {
         text: true,
         type: "auto",
         numResults: 2,
         context: true,
-      }
-    );
-    console.log(JSON.stringify(result, null, 2));
-    allResults.push(result);
+      });
+      console.log(JSON.stringify(result, null, 2));
+      allResults.push(result);
+    } catch (err) {
+      console.error("Exa entity+concept query failed:", err);
+    }
   }
 
   for (let k = 0, i = 0; i < 3 && k < 3; i++, k++) {
-    const result = await exa.searchAndContents(`${entities[i]} ${claims[k]}`, {
-      text: true,
-      type: "auto",
-      numResults: 2,
-      context: true,
-    });
-    console.log(JSON.stringify(result, null, 2));
-    allResults.push(result);
+    if (!entities[i] || !claims[k]) continue;
+    const query = `${entities[i]} ${claims[k]}`;
+    try {
+      const result = await exa.searchAndContents(query, {
+        text: true,
+        type: "auto",
+        numResults: 2,
+        context: true,
+      });
+      console.log(JSON.stringify(result, null, 2));
+      allResults.push(result);
+    } catch (err) {
+      console.error("Exa entity+claim query failed:", err);
+    }
   }
 
   return allResults;
