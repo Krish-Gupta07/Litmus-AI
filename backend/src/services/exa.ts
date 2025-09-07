@@ -60,3 +60,11 @@ export function extractSourceLinks(exaResults: any[]): string[] {
     .flatMap((result) => result.results?.map((item: any) => item.url) || [])
     .filter(Boolean);
 }
+
+export function exaFilter(exa: any[]) {
+  let exaData: string[] = [];
+  for (let i = 0; i < exa.length; i++) {
+    exaData.push(exa[i].context);
+  }
+  return exaData;
+}

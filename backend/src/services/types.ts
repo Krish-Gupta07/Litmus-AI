@@ -10,7 +10,7 @@ export type TransformedQuery = {
 };
 
 export type RecordType = {
-  id: `${string}-${string}-${string}-${string}-${string}`;
+  id: string;
   values: number[];
   metadata: {
     text: string;

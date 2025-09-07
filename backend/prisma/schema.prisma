@@ -46,6 +46,7 @@ model AnalysisJob {
   id          String    @id @default(cuid())
   status      JobStatus @default(PENDING)
   input       String    @db.Text
+  scrapedText String?   @db.Text
   category    Category?
   result      Json?
   createdAt   DateTime  @default(now())
