@@ -151,13 +151,13 @@ async function updateJobResult(
  * Create a new analysis job in database
  */
 export async function createAnalysisJob(
-  userId: number,
+  userId: string,
   input: string,
   inputType: "url" | "text"
 ): Promise<string> {
   const job = await prisma.analysisJob.create({
     data: {
-      userId: userId.toString(),
+      userId,
       input,
       status: JobStatus.PENDING,
       result: "",

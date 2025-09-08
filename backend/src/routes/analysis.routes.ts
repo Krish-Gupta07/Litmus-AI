@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 const analyzeRequestSchema = z.object({
   url: z.string().url().optional(),
   text: z.string().min(1).optional(),
-  userId: z.number().int().positive(),
+  userId: z.string().min(1),
 });
 
 const jobStatusSchema = z.object({
@@ -115,8 +115,8 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
     }
 
     // Get job details from database
-    const dbJob = await prisma.analysisJobs.findFirst({
-      where: { id: parseInt(jobId!) },
+    const dbJob = await prisma.analysisJob.findFirst({
+      where: { id: jobId },
       select: {
         id: true,
         status: true,
@@ -151,16 +151,16 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
  */
 router.get('/jobs/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId!);
+    const userId = req.params.userId;
     
-    if (isNaN(userId)) {
+    if (userId!) {
       return res.status(400).json({
         success: false,
         error: 'Invalid user ID',
       });
     }
 
-    const jobs = await prisma.analysisJobs.findMany({
+    const jobs = await prisma.analysisJob.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       select: {

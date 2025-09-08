@@ -11,7 +11,7 @@ import { qualityChecker } from "../services/qualityCheck.js";
 import { transformQuery as queryTransformer } from "../services/query-transform.js";
 import { runExa, extractSourceLinks, exaFilter } from "../services/exa.js";
 
-const cache = true;
+const cache = false;
 
 async function litmus() {
   try {
@@ -116,6 +116,7 @@ async function noCacheRoute() {
     const exa = await runExa(transformedQuery);
     const sourceLinks = extractSourceLinks(exa);
     const exaData = exaFilter(exa);
+    console.log (exaData)
     const chunking = await chunk(exaData);
     const embedding = await embedData(chunking);
     const addDataToVectors = await vectorsData(embedding, chunking, category);

@@ -1,5 +1,5 @@
 export interface AnalysisJobData {
-  userId: number;
+  userId: string;
   input: string;
   inputType: 'url' | 'text';
   url?: string;

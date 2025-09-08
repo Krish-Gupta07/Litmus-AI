@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import { Exa } from "exa-js";
-import type { TransformedQuery } from "./types.js";
+import type { TransformedQuery } from "../types/exa.js";
 
 dotenv.config();
 
