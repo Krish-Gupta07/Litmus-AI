@@ -9,9 +9,9 @@ import { queryEmbedding } from "../services/ragQuery.js";
 import { getFinalAnswer } from "../services/final-anwer.js";
 import { qualityChecker } from "../services/qualityCheck.js";
 import { transformQuery as queryTransformer } from "../services/query-transform.js";
-import { runExa, extractSourceLinks } from "../services/exa.js";
+import { runExa, extractSourceLinks, exaFilter } from "../services/exa.js";
 
-const cache = true;
+const cache = false;
 
 async function litmus() {
   try {
@@ -32,6 +32,7 @@ async function litmus() {
 }
 
 async function cacheRoute() {
+  const startTime = Date.now();
   try {
     const transformedQuery = await queryTransformer(userQuery);
     const queryEmbedder = await queryEmbedding(
@@ -69,6 +70,7 @@ async function cacheRoute() {
         console.error("qualityCheck failed:", qualityCheck);
         throw new Error("Failed to get result from quality checker");
       }
+      const processingTime = Date.now() - startTime;
       if (checkResult > QUALITY_SCORE_THRESHOLD) {
         return {
           success: true,
@@ -76,6 +78,7 @@ async function cacheRoute() {
           sources: null,
           credibility: checkResult,
           userQuery: transformedQuery.userQuery,
+          processingTime,
         };
       } else {
         return {
@@ -84,15 +87,18 @@ async function cacheRoute() {
           sources: null,
           credibility: null,
           userQuery: transformedQuery.userQuery,
+          processingTime,
         };
       }
     } else {
+      const processingTime = Date.now() - startTime;
       return {
         success: false,
         data: null,
         sources: null,
         credibility: null,
         userQuery: transformedQuery.userQuery,
+        processingTime,
       };
     }
   } catch (error) {
@@ -102,17 +108,15 @@ async function cacheRoute() {
 }
 
 async function noCacheRoute() {
+  const startTime = Date.now();
   try {
     const transformedQuery = await queryTransformer(userQuery);
     const category = transformedQuery.category;
 
     const exa = await runExa(transformedQuery);
     const sourceLinks = extractSourceLinks(exa);
-    let exaData: string[] = [];
-    for (let i = 0; i < exa.length; i++) {
-      exaData.push(exa[i].context);
-    }
-
+    const exaData = exaFilter(exa);
+    console.log (exaData)
     const chunking = await chunk(exaData);
     const embedding = await embedData(chunking);
     const addDataToVectors = await vectorsData(embedding, chunking, category);
@@ -148,12 +152,14 @@ async function noCacheRoute() {
       console.error("qualityCheck failed:", qualityCheck);
       throw new Error("Failed to get result from quality checker");
     }
+    const processingTime = Date.now() - startTime;
     return {
       success: true,
       data: finalResponse,
       sources: sourceLinks,
       credibility: checkResult,
       userQuery: transformedQuery.userQuery,
+      processingTime,
     };
   } catch (error) {
     console.error("Error in noCacheRoute:", error);

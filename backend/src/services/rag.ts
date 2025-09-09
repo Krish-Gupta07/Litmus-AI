@@ -3,7 +3,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import * as dotenv from "dotenv";
 import { embedMany } from "ai";
 import { randomUUID } from "crypto";
-import type { RecordType } from "./types.js";
+import type { RecordType } from "../types/rag.js";
 
 dotenv.config();
 

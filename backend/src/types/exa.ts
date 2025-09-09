@@ -8,12 +8,3 @@ export type TransformedQuery = {
   userQuery: string;
   category: string;
 };
-
-export type RecordType = {
-  id: `${string}-${string}-${string}-${string}-${string}`;
-  values: number[];
-  metadata: {
-    text: string;
-    category: string;
-  };
-};

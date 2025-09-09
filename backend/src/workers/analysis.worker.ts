@@ -45,8 +45,8 @@ export async function processAnalysisJob(
     // Step 2: Transform query using AI
     console.log("🤖 Transforming query with AI");
 
-    const messages = [{ role: "user", content: scrapedText || input }];
-    const transformResult = await transformQuery(messages);
+    const queryText = scrapedText || input;
+    const transformResult = await transformQuery(queryText);
 
     if (!transformResult) {
       throw new Error("Failed to transform query");
@@ -66,10 +66,14 @@ export async function processAnalysisJob(
 
     // Step 4: Save results to database
     const result = {
-      title: finalAnswerResult.title,
-      description: finalAnswerResult.description,
-      searchTopics: transformResult.search_topics,
-      ragQuestions: transformResult.rag_question,
+      title: ("payload" in finalAnswerResult && finalAnswerResult.payload?.title) 
+        ? finalAnswerResult.payload.title 
+        : "Analysis Complete",
+      description: ("payload" in finalAnswerResult && finalAnswerResult.payload?.description) 
+        ? finalAnswerResult.payload.description 
+        : "No description available",
+      searchTopics: transformResult.searchTopics,
+      ragQuestions: transformResult.ragQuestion,
     };
 
     await updateJobResult(job.id as string, result, scrapedText);
@@ -109,8 +113,8 @@ async function updateJobStatus(
   error?: string
 ) {
   try {
-    await prisma.analysisJobs.update({
-      where: { id: parseInt(jobId) },
+    await prisma.analysisJob.update({
+      where: { id: jobId },
       data: {
         status,
         ...(error && { result: JSON.stringify({ error }) }),
@@ -130,8 +134,8 @@ async function updateJobResult(
   scrapedText?: string
 ) {
   try {
-    await prisma.analysisJobs.update({
-      where: { id: parseInt(jobId) },
+    await prisma.analysisJob.update({
+      where: { id: jobId },
       data: {
         status: JobStatus.COMPLETED,
         result: JSON.stringify(result),
@@ -147,11 +151,11 @@ async function updateJobResult(
  * Create a new analysis job in database
  */
 export async function createAnalysisJob(
-  userId: number,
+  userId: string,
   input: string,
   inputType: "url" | "text"
-): Promise<number> {
-  const job = await prisma.analysisJobs.create({
+): Promise<string> {
+  const job = await prisma.analysisJob.create({
     data: {
       userId,
       input,

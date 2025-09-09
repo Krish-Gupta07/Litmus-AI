@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import { Exa } from "exa-js";
-import type { TransformedQuery } from "./types.js";
+import type { TransformedQuery } from "../types/exa.js";
 
 dotenv.config();
 
@@ -59,4 +59,12 @@ export function extractSourceLinks(exaResults: any[]): string[] {
   return exaResults
     .flatMap((result) => result.results?.map((item: any) => item.url) || [])
     .filter(Boolean);
+}
+
+export function exaFilter(exa: any[]) {
+  let exaData: string[] = [];
+  for (let i = 0; i < exa.length; i++) {
+    exaData.push(exa[i].context);
+  }
+  return exaData;
 }
