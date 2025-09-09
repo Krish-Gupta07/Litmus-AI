@@ -17,7 +17,7 @@ export interface AnalysisJobResult {
       concepts: string[];
       claims: string[];
     };
-    ragQuestions: string[];
+    ragQuestions: string;
   };
   error?: string;
   scrapedText?: string;
