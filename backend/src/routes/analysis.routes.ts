@@ -153,7 +153,7 @@ router.get('/jobs/:userId', async (req: Request, res: Response) => {
   try {
     const userId = req.params.userId;
     
-    if (userId!) {
+    if (!userId) {
       return res.status(400).json({
         success: false,
         error: 'Invalid user ID',

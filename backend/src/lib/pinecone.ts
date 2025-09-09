@@ -1,6 +1,6 @@
 import { Pinecone } from "@pinecone-database/pinecone";
 import * as dotenv from "dotenv";
-import { type RecordType } from "../services/types.js";
+import { type RecordType } from "../types/rag.js";
 
 dotenv.config();
 
