@@ -116,7 +116,7 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
 
     // Get job details from database
     const dbJob = await prisma.analysisJob.findFirst({
-      where: { id: jobId },
+      where: { id: jobId! },
       select: {
         id: true,
         status: true,
@@ -153,7 +153,7 @@ router.get('/jobs/:userId', async (req: Request, res: Response) => {
   try {
     const userId = req.params.userId;
     
-    if (userId!) {
+    if (!userId) {
       return res.status(400).json({
         success: false,
         error: 'Invalid user ID',

@@ -3,7 +3,7 @@
 import type React from 'react';
 
 import { useState, useRef, useEffect } from 'react';
-import { ArrowUp, InfoIcon, LinkIcon, Loader2, TypeIcon } from 'lucide-react';
+import { InfoIcon, LinkIcon, Loader2, TypeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
