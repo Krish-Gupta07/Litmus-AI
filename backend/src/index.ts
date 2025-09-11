@@ -5,7 +5,7 @@ import cors from "cors";
 import { transformQuery } from "./services/query-transform.js";
 import { getFinalAnswer } from "./services/final-anwer.js";
 import { QueueService } from "./services/queue.js";
-// import analysisRoutes from "./routes/analysis.routes.js";
+import analysisRoutes from "./routes/analysis.routes.js";
 import { authenticateUser, rateLimit } from "./middleware/auth.js";
 import webhookRoutes from "./routes/webhooks.routes.js";
 
@@ -32,7 +32,7 @@ app.post("/api/query-transform", transformQuery);
 // app.post("/api/final-answer", getFinalAnswer);
 
 // New queue-based analysis routes
-// app.use("/api/analysis", analysisRoutes);
+app.use("/api/analysis", analysisRoutes);
 
 // webhook routes
 app.use("/api/webhooks", webhookRoutes);

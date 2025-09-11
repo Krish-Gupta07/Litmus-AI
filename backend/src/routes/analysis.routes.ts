@@ -116,7 +116,7 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
 
     // Get job details from database
     const dbJob = await prisma.analysisJob.findFirst({
-      where: { id: jobId },
+      where: { id: jobId! },
       select: {
         id: true,
         status: true,

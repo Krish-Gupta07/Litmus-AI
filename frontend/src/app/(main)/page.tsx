@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import ChatInput from '@/components/chat-input';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
@@ -9,55 +10,51 @@ export default function Home() {
     text: '',
     cached: false,
   });
-  const [hasMessages, setHasMessages] = useState(false);
+  const router = useRouter();
 
-  const handleSendMessage = async (message: string, thinkingMode: boolean) => {
-    console.log('Sending message:', { message, thinkingMode });
+  const mockResponse = {
+    id: crypto.randomUUID(),
+    status: 'success',
+    payload: {
+      title: 'AI in Healthcare Report',
+      body: 'Well-structured report with moderate technical accuracy',
+    },
+    message: 'Content analyzed successfully',
+  };
 
-    if (!hasMessages) {
-      setHasMessages(true);
-    }
+  const handleSendMessage = async (message: string, cacheMode: boolean) => {
+    console.log('Sending message:', { message, cacheMode });
 
-    setMessage({ text: message, cached: thinkingMode });
+    setMessage({ text: message, cached: cacheMode });
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2000);
+      router.push(`/chat/${mockResponse.id}`);
+    });
+
     setIsLoading(false);
   };
 
-
   return (
     <main className="bg-background flex min-h-[91vh] flex-col">
-      {!hasMessages ? (
-        <div className="flex flex-1 flex-col items-center justify-center p-4">
-          <div className="w-full max-w-2xl space-y-8">
-            <div className="space-y-2 text-center">
-              <h1 className="text-foreground text-5xl font-medium">Litmus AI</h1>
-              <p className="text-muted-foreground mx-auto max-w-lg">
-                Advanced AI-powered content analysis to detect misinformation and assess credibility
-                with precision{' '}
-              </p>
-            </div>
-            <ChatInput
-              onSendMessage={handleSendMessage}
-              isLoading={isLoading}
-              placeholder="Place a URl or text to begin analysis"
-              maxLength={2000}
-            />
+      <div className="flex flex-1 flex-col items-center justify-center p-4">
+        <div className="w-full max-w-2xl space-y-8">
+          <div className="space-y-2 text-center">
+            <h1 className="text-foreground text-5xl font-medium">Litmus AI</h1>
+            <p className="text-muted-foreground mx-auto max-w-lg">
+              Advanced AI-powered content analysis to detect misinformation and assess credibility
+              with precision{' '}
+            </p>
           </div>
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            isLoading={isLoading}
+            placeholder="Place a URl or text to begin analysis"
+            maxLength={2000}
+          />
         </div>
-      ) : (
-        <>
-          <main className="mx-auto max-w-6xl">
-            <div className="border-border bg-muted rounded-xl border p-4">
-              <h2>Analyzed Content</h2>
-              <div>
-                <p>{message.text}</p>
-              </div>
-            </div>
-          </main>
-        </>
-      )}
+      </div>
     </main>
   );
 }
