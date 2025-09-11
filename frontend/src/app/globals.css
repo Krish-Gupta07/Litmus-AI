@@ -128,3 +128,25 @@
     @apply cursor-pointer;
   }
 }
+
+/* Chrome, Edge, Safari */
+
+::-webkit-scrollbar-track {
+  background: transparent; /* track color */
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted); /* scrollbar handle */
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted); /* hover color */
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;                 /* auto | thin | none */
+  scrollbar-color: var(--muted) transparent; /* thumb, track */
+}
+
