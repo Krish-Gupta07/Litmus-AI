@@ -14,9 +14,6 @@ if (!EXA_API_KEY) {
 }
 
 const exa = new Exa(EXA_API_KEY);
-
-const scrapeUrl = "https://x.com/fardeentwt/status/1963624881959911917";
-
 interface ScrapeResult {
   title: string;
   body: string;
@@ -187,5 +184,3 @@ async function scrapeWithPlaywright(
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-scrape(scrapeUrl);

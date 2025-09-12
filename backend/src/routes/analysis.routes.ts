@@ -61,6 +61,7 @@ router.post('/analyze', async (req: Request, res: Response) => {
       userId,
       input,
       inputType,
+      dbJobId, // Pass the database job ID to the queue
       ...(url && { url }),
       ...(text && { text }),
     });

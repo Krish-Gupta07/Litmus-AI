@@ -4,6 +4,7 @@ export interface AnalysisJobData {
   inputType: 'url' | 'text';
   url?: string;
   text?: string;
+  dbJobId?: string; // Database job ID for tracking
 }
 
 export interface AnalysisJobResult {
@@ -12,12 +13,14 @@ export interface AnalysisJobResult {
   result?: {
     title: string;
     description: string;
+    credibilityScore: number;
     searchTopics: {
       entities: string[];
       concepts: string[];
       claims: string[];
     };
     ragQuestions: string;
+    sources?: string[];
   };
   error?: string;
   scrapedText?: string;

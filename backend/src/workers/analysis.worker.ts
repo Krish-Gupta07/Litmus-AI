@@ -5,6 +5,8 @@ import { scrape } from "../services/scraper.js";
 import { PrismaClient } from "@prisma/client";
 import { transformQuery } from "../services/query-transform.js";
 import { getFinalAnswer } from "../services/final-anwer.js";
+import { qualityChecker } from "../services/qualityCheck.js";
+import { runExa, extractSourceLinks } from "../services/exa.js";
 
 const prisma = new PrismaClient();
 
@@ -14,25 +16,25 @@ const prisma = new PrismaClient();
 export async function processAnalysisJob(
   job: Job<AnalysisJobData>
 ): Promise<AnalysisJobResult> {
-  const { userId, input, inputType, url, text } = job.data;
+  const { userId, input, inputType, url, text, dbJobId } = job.data;
 
-  console.log(`🔄 Processing job ${job.id} for user ${userId}`);
+  // processing started
 
   try {
-    // Update job status to RUNNING in database
-    await updateJobStatus(job.id as string, JobStatus.RUNNING);
+    // Update job status to RUNNING in database (use dbJobId, not queue job id)
+    if (dbJobId) {
+      await updateJobStatus(dbJobId, JobStatus.RUNNING);
+    }
     await job.updateProgress(10);
 
     // Step 1: Scrape content if URL provided
     let scrapedText = "";
     if (inputType === "url" && url) {
-      console.log(`📄 Scraping URL: ${url}`);
       await job.updateProgress(20);
 
       const scrapedData = await scrape(url);
-      if (scrapedData) {
+        if (scrapedData) {
         scrapedText = scrapedData.body;
-        console.log(`✅ Scraped ${scrapedText.length} characters`);
       } else {
         throw new Error("Failed to scrape URL content");
       }
@@ -43,7 +45,7 @@ export async function processAnalysisJob(
     await job.updateProgress(40);
 
     // Step 2: Transform query using AI
-    console.log("🤖 Transforming query with AI");
+  // transform query
 
     const queryText = scrapedText || input;
     const transformResult = await transformQuery(queryText);
@@ -55,31 +57,59 @@ export async function processAnalysisJob(
     await job.updateProgress(60);
 
     // Step 3: Get final answer using AI
-    console.log("🔍 Generating final answer");
-    const finalAnswerResult = await getFinalAnswer(transformResult, []); // Empty context for now
+  const finalAnswerResult = await getFinalAnswer(transformResult, []); // Empty context for now
 
     if (!finalAnswerResult) {
       throw new Error("Failed to generate final answer");
     }
 
+    // finalAnswerResult received
+
     await job.updateProgress(90);
 
-    // Step 4: Save results to database
+    // Step 4: Quality check and source extraction
+    let finalResponse: string;
+    let credibilityScore: number = 0;
+    let sources: string[] | null = null;
+
+    if ("payload" in finalAnswerResult && finalAnswerResult.payload) {
+      finalResponse = finalAnswerResult.payload.description;
+      
+      // Run quality check using existing service
+      const qualityCheck = await qualityChecker(finalResponse, transformResult);
+      if ("sufficiency_percentage" in qualityCheck) {
+        credibilityScore = qualityCheck.sufficiency_percentage;
+      }
+
+      // Extract sources for URL inputs (no-cache route logic)
+      if (inputType === "url") {
+        try {
+          const exa = await runExa(transformResult);
+          sources = extractSourceLinks(exa);
+        } catch (error) {
+              sources = null;
+            }
+      }
+    } else {
+      finalResponse = "No description available";
+    }
+
+    // Step 5: Prepare final result
     const result = {
       title: ("payload" in finalAnswerResult && finalAnswerResult.payload?.title) 
         ? finalAnswerResult.payload.title 
         : "Analysis Complete",
-      description: ("payload" in finalAnswerResult && finalAnswerResult.payload?.description) 
-        ? finalAnswerResult.payload.description 
-        : "No description available",
+      description: finalResponse,
+      credibilityScore,
       searchTopics: transformResult.searchTopics,
       ragQuestions: transformResult.ragQuestion,
+      ...(sources && { sources })
     };
 
-    await updateJobResult(job.id as string, result, scrapedText);
+    await updateJobResult(dbJobId!, result, scrapedText);
     await job.updateProgress(100);
 
-    console.log(`✅ Job ${job.id} completed successfully`);
+  // job completed successfully
 
     return {
       jobId: parseInt(job.id as string),
@@ -88,13 +118,15 @@ export async function processAnalysisJob(
       scrapedText,
     };
   } catch (error) {
-    console.error(`❌ Job ${job.id} failed:`, error);
+  console.error(`Job ${job.id} (DB: ${dbJobId}) failed:`, error);
 
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
 
-    // Update job status to FAILED in database
-    await updateJobStatus(job.id as string, JobStatus.FAILED, errorMessage);
+    // Update job status to FAILED in database (use dbJobId)
+    if (dbJobId) {
+      await updateJobStatus(dbJobId, JobStatus.FAILED, errorMessage);
+    }
 
     return {
       jobId: parseInt(job.id as string),
