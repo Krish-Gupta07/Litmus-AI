@@ -32,7 +32,7 @@ Need help? Just ask! 🤖`,
 
 📝 *Analyzing:* "${content.length > 60 ? content.substring(0, 60) + '...' : content}"
 
-⏱️ *Please wait 30-60 seconds for results...*`,
+⏱️ *Please wait while we process your request...*`,
 
   completed: (title: string, description: string, credibility: number, sources?: string[]) => {
     let message = `✅ *Fact-Check Complete*

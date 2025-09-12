@@ -6,7 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { transformQuery } from "../services/query-transform.js";
 import { getFinalAnswer } from "../services/final-anwer.js";
 import { qualityChecker } from "../services/qualityCheck.js";
-import { runExa, extractSourceLinks } from "../services/exa.js";
+import { runExa, extractSourceLinks, exaFilter } from "../services/exa.js";
 
 const prisma = new PrismaClient();
 
@@ -70,8 +70,17 @@ export async function processAnalysisJob(
 
     await job.updateProgress(60);
 
-    // Step 3: Get final answer using AI
-  const finalAnswerResult = await getFinalAnswer(transformResult, []); // Empty context for now
+    // Step 3: Get Exa search results for better context
+    let exaContext: string[] = [];
+    try {
+      const exaResults = await runExa(transformResult);
+      exaContext = exaFilter(exaResults);
+    } catch (error) {
+      console.error("Exa search failed:", error);
+    }
+
+    // Step 4: Get final answer using AI with context
+    const finalAnswerResult = await getFinalAnswer(transformResult, exaContext); // Pass Exa context
 
     if (!finalAnswerResult) {
       throw new Error("Failed to generate final answer");
@@ -95,14 +104,13 @@ export async function processAnalysisJob(
         credibilityScore = qualityCheck.sufficiency_percentage;
       }
 
-      // Extract sources for URL inputs (no-cache route logic)
-      if (inputType === "url") {
-        try {
-          const exa = await runExa(transformResult);
-          sources = extractSourceLinks(exa);
-        } catch (error) {
-              sources = null;
-            }
+      // Extract sources for both URL and text inputs to provide better context
+      try {
+        const exa = await runExa(transformResult);
+        sources = extractSourceLinks(exa);
+      } catch (error) {
+        console.error("Exa search failed:", error);
+        sources = null;
       }
     } else {
       finalResponse = "No description available";

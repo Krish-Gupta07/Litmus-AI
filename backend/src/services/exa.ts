@@ -66,5 +66,6 @@ export function exaFilter(exa: any[]) {
   for (let i = 0; i < exa.length; i++) {
     exaData.push(exa[i].context);
   }
+  console.log(exaData)
   return exaData;
 }
