@@ -10,6 +10,20 @@ import { runExa, extractSourceLinks } from "../services/exa.js";
 
 const prisma = new PrismaClient();
 
+
+// Import WhatsApp notification after the worker exists to avoid circular dependency
+async function notifyWhatsAppUser(userId: string, result: any) {
+  try {
+    // Check if userId looks like a phone number (starts with + or digits)
+    if (/^[\+\d]/.test(userId)) {
+      const { WhatsAppHandler } = await import("../bots/whatsapp/handler.js");
+      await WhatsAppHandler.handleJobResult(userId, result);
+    }
+  } catch (error) {
+    console.error('Failed to notify WhatsApp user:', error);
+  }
+}
+
 /**
  * Process an analysis job from the queue
  */
@@ -106,10 +120,17 @@ export async function processAnalysisJob(
       ...(sources && { sources })
     };
 
-    await updateJobResult(dbJobId!, result, scrapedText);
-    await job.updateProgress(100);
+if (dbJobId) {
+  await updateJobResult(dbJobId, result, scrapedText);
+}
+await job.updateProgress(100);
 
   // job completed successfully
+  // Notify user if this is a WhatsApp job (userId looks like a phone number)
+  await notifyWhatsAppUser(userId, {
+    success: true,
+    data: result
+  });
 
     return {
       jobId: parseInt(job.id as string),
@@ -127,6 +148,12 @@ export async function processAnalysisJob(
     if (dbJobId) {
       await updateJobStatus(dbJobId, JobStatus.FAILED, errorMessage);
     }
+    
+    // Notify user if this is a WhatsApp job (userId looks like a phone number)
+    await notifyWhatsAppUser(userId, {
+      success: false,
+      error: errorMessage
+    });
 
     return {
       jobId: parseInt(job.id as string),
