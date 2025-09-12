@@ -8,6 +8,7 @@ import { QueueService } from "./services/queue.js";
 import analysisRoutes from "./routes/analysis.routes.js";
 import { authenticateUser, rateLimit } from "./middleware/auth.js";
 import webhookRoutes from "./routes/webhooks.routes.js";
+import morgan from "morgan";
 
 dotenv.config();
 const app = express();
@@ -16,6 +17,7 @@ const PORT = process.env.PORT || 4000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(morgan("dev"));
 
 // Health check endpoint
 app.get("/api/health", (_req: Request, res: Response) => {
