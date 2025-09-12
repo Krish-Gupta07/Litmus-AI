@@ -9,6 +9,7 @@ import analysisRoutes from "./routes/analysis.routes.js";
 import { authenticateUser, rateLimit } from "./middleware/auth.js";
 import webhookRoutes from "./routes/webhooks.routes.js";
 import morgan from "morgan";
+import whatsappRoutes from "./bots/whatsapp/routes.js";
 
 dotenv.config();
 const app = express();
@@ -35,6 +36,9 @@ app.post("/api/query-transform", transformQuery);
 
 // New queue-based analysis routes
 app.use("/api/analysis", analysisRoutes);
+
+// WhatsApp webhook endpoints
+app.use("/api/whatsapp", whatsappRoutes);
 
 // webhook routes
 app.use("/api/webhooks", webhookRoutes);
