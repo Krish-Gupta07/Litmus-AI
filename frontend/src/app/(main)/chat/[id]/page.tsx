@@ -21,21 +21,58 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { mockResponses } from '@/lib/mockResponse';
+import { getApi } from '@/helpers/api';
+import { apiEndPoints } from '@/helpers/apiEndpoints';
+import { useEffect, useState } from 'react';
+import type { AnalysisResponse, AnalysisData, AnalysisMetadata } from '@/types/analysis';
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
+  const idNumber = parseInt(id);
+  const [responseData, setResponseData] = useState<AnalysisData | null>(null);
+  const [metadata, setMetadata] = useState<AnalysisMetadata | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockResponse = mockResponses.find((c) => c.id === id);
-  if (!mockResponse) {
-    return <div>Chat not found</div>;
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      setIsLoading(true);
+      const timestamp = new Date().getTime();
+      const response = await getApi(`${apiEndPoints.analysis.status(idNumber)}?t=${timestamp}`);
+
+      if (response.status === 200) {
+        const apiResponse: AnalysisResponse = response.data;
+        if (apiResponse.status === 200 && apiResponse.data) {
+          setResponseData(apiResponse.data.analysis);
+          setMetadata(apiResponse.data.metadata);
+        } else {
+          setError('Failed to fetch analysis data');
+        }
+      } else {
+        setError('Failed to fetch analysis data');
+      }
+
+      setIsLoading(false);
+    };
+
+    fetchAnalysis();
+  }, [id]);
+
+  if (isLoading) {
+    return <div className="mx-auto mt-10 mb-20 max-w-2xl">Loading...</div>;
   }
-  const createdAt = new Date(mockResponse.createdAt);
+
+  if (error || !responseData) {
+    return (
+      <div className="mx-auto mt-10 mb-20 max-w-2xl">Error: {error || 'Analysis not found'}</div>
+    );
+  }
+
+  const createdAt = new Date(metadata?.timestamp || Date.now());
   const formattedDate = createdAt.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -45,8 +82,8 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       <div className="mx-auto mt-10 mb-20 max-w-2xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {mockResponse.inputType === 'url' ? <LinkIcon /> : <TypeIcon />}
-            <h1 className="text-2xl font-medium">{mockResponse.payload.title}</h1>
+            <TypeIcon />
+            <h1 className="text-2xl font-medium">{responseData.result.title}</h1>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -76,13 +113,17 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         <div className="mt-2 flex items-center gap-2">
           <Calendar1Icon size={16} />
           <span className="text-muted-foreground text-sm">{formattedDate}</span>
-          {mockResponse.status === 'success' ? (
+          {responseData.status === 'completed' ? (
             <span className="w-fit rounded-md bg-green-500/10 px-2 py-1 text-xs text-green-500">
               Completed
             </span>
-          ) : (
+          ) : responseData.status === 'failed' ? (
             <span className="w-fit rounded-md bg-red-500/10 px-2 py-1 text-xs text-red-500">
               Failed
+            </span>
+          ) : (
+            <span className="w-fit rounded-md bg-yellow-500/10 px-2 py-1 text-xs text-yellow-500">
+              {responseData.status === 'running' ? 'Processing' : 'Pending'}
             </span>
           )}
         </div>
@@ -91,19 +132,19 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           <h2 className="text-muted-foreground mb-8 text-sm font-medium">Credibility Assessment</h2>
           <div className="">
             <div className="flex items-center gap-2">
-              {mockResponse.accuracy > 75 ? (
+              {responseData.result.credibilityScore > 75 ? (
                 <CheckCircleIcon className="text-green-500" />
-              ) : mockResponse.accuracy > 50 ? (
+              ) : responseData.result.credibilityScore > 50 ? (
                 <CircleIcon className="text-yellow-500" />
               ) : (
                 <XCircleIcon className="text-red-500" />
               )}
-              <p className="text-2xl font-medium">{mockResponse.accuracy}%</p>
+              <p className="text-2xl font-medium">{responseData.result.credibilityScore}%</p>
             </div>
-            <Progress value={mockResponse.accuracy} className="mt-2" />
+            <Progress value={responseData.result.credibilityScore} className="mt-2" />
           </div>
           <div className="mt-4 text-xs font-medium">
-            {mockResponse.accuracy > 75 ? (
+            {responseData.result.credibilityScore > 75 ? (
               <div>
                 <p className="w-fit rounded-md bg-green-500/10 px-2 py-1 text-green-500">
                   Highly Credible
@@ -112,7 +153,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                   Highly credible. The response is very accurate and credible.
                 </p>
               </div>
-            ) : mockResponse.accuracy > 50 ? (
+            ) : responseData.result.credibilityScore > 50 ? (
               <div>
                 <p className="w-fit rounded-md bg-yellow-500/10 px-2 py-1 text-yellow-500">
                   Average Credible
@@ -136,28 +177,74 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
 
         <div className="bg-sidebar mt-5 rounded-lg p-4">
           <h2 className="text-muted-foreground mb-8 text-sm font-medium">Reasoning Data</h2>
-          <p>{mockResponse.payload.body}</p>
+          <p>{responseData.result.description}</p>
         </div>
 
         <div className="bg-sidebar mt-5 rounded-lg p-4">
           <h2 className="text-muted-foreground mb-8 text-sm font-medium">Analyzed Content</h2>
           <div className="mt-2">
-            {mockResponse.inputType === 'url' ? (
-              <Link
-                href={mockResponse.input}
-                target="_blank"
-                className="text-accent flex items-center gap-2 underline-offset-4 hover:underline"
-              >
-                <LinkIcon size={16} /> {mockResponse.input}
-                <ArrowUpRightIcon size={16} />
-              </Link>
-            ) : (
-              <p className="flex items-center gap-2">
-                <TypeIcon size={16} /> {mockResponse.input}
-              </p>
-            )}
+            <p className="flex items-center gap-2">
+              <TypeIcon size={16} /> {responseData.scrapedText}
+            </p>
           </div>
         </div>
+
+        {responseData.result.searchTopics.entities.length > 0 && (
+          <div className="bg-sidebar mt-5 rounded-lg p-4">
+            <h2 className="text-muted-foreground mb-8 text-sm font-medium">Entities</h2>
+            <div className="flex flex-wrap gap-2">
+              {responseData.result.searchTopics.entities.map((entity, index) => (
+                <span
+                  key={index}
+                  className="rounded-md bg-blue-500/10 px-2 py-1 text-xs text-blue-500"
+                >
+                  {entity}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {responseData.result.searchTopics.concepts.length > 0 && (
+          <div className="bg-sidebar mt-5 rounded-lg p-4">
+            <h2 className="text-muted-foreground mb-8 text-sm font-medium">Concepts</h2>
+            <div className="flex flex-wrap gap-2">
+              {responseData.result.searchTopics.concepts.map((concept, index) => (
+                <span
+                  key={index}
+                  className="rounded-md bg-purple-500/10 px-2 py-1 text-xs text-purple-500"
+                >
+                  {concept}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {responseData.result.searchTopics.claims.length > 0 && (
+          <div className="bg-sidebar mt-5 rounded-lg p-4">
+            <h2 className="text-muted-foreground mb-8 text-sm font-medium">Claims</h2>
+            <div className="flex flex-wrap gap-2">
+              {responseData.result.searchTopics.claims.map((claim, index) => (
+                <p key={index}>{claim}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {responseData.result.ragQuestions && (
+          <div className="bg-sidebar mt-5 rounded-lg p-4">
+            <h2 className="text-muted-foreground mb-8 text-sm font-medium">RAG Questions</h2>
+            <p>{responseData.result.ragQuestions}</p>
+          </div>
+        )}
+
+        {responseData.scrapedText && (
+          <div className="bg-sidebar mt-5 rounded-lg p-4">
+            <h2 className="text-muted-foreground mb-8 text-sm font-medium">Input Text</h2>
+            <p>{responseData.scrapedText}</p>
+          </div>
+        )}
       </div>
     </div>
   );

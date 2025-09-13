@@ -106,9 +106,9 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
     }
 
     // Get job status from queue
-    const queueStatus = await QueueService.getJobStatus(jobId!);
+    const data = await QueueService.getJobStatus(jobId!);
     
-    if (queueStatus.error) {
+    if (data.error) {
       return res.status(404).json({
         success: false,
         error: 'Job not found',
@@ -116,31 +116,33 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
     }
 
     // Get job details from database
-    const dbJob = await prisma.analysisJob.findFirst({
-      where: { id: jobId! },
-      select: {
-        id: true,
-        status: true,
-        result: true,
-        createdAt: true,
-      },
-    });
+    // const dbJob = await prisma.analysisJob.findFirst({
+    //   where: { id: jobId! },
+    //   select: {
+    //     id: true,
+    //     status: true,
+    //     input: true,
+    //     result: true,
+    //     createdAt: true,
+    //     updatedAt: true,
+    //   },
+    // });
 
     return res.status(200).json({
-      success: true,
-      data: {
-        jobId,
-        queueStatus,
-        dbJob,
-        progress: queueStatus.progress || 0,
-        currentStep: getCurrentStep(queueStatus.state, queueStatus.progress),
-      },
+      status: 200,
+      data,
+      // data: {
+        // jobId,
+        // dbJob,
+        // progress: queueStatus.progress || 0,
+      //   currentStep: getCurrentStep(queueStatus.state, queueStatus.progress),
+      // },
     });
 
   } catch (error) {
     console.error('Error getting job status:', error);
     return res.status(500).json({
-      success: false,
+      status: 500,
       error: 'Failed to get job status',
     });
   }

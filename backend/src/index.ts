@@ -14,9 +14,15 @@ import whatsappRoutes from "./bots/whatsapp/routes.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
+const corsOptions = {
+  origin: ["http://localhost:3000", "https://your-frontend.com"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, // if you want to allow cookies or auth headers
+};
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 
