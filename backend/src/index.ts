@@ -4,12 +4,13 @@ import type { Request, Response } from "express";
 import cors from "cors";
 import { transformQuery } from "./services/query-transform.js";
 import { getFinalAnswer } from "./services/final-anwer.js";
-import { QueueService } from "./services/queue.js";
+import { QueueService, startAutoScaling, startMonitoring } from "./services/queue.js";
 import analysisRoutes from "./routes/analysis.routes.js";
 import { authenticateUser, rateLimit } from "./middleware/auth.js";
 import webhookRoutes from "./routes/webhooks.routes.js";
 import morgan from "morgan";
 import whatsappRoutes from "./bots/whatsapp/routes.js";
+import { checkRedisHealth, getRedisStatus, closeRedisConnection } from "./lib/redis.js";
 
 dotenv.config();
 const app = express();
@@ -20,14 +21,44 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
-// Health check endpoint
-app.get("/api/health", (_req: Request, res: Response) => {
-  res.json({
-    status: "ok",
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    version: "1.0.0",
-  });
+// Enhanced health check endpoint
+app.get("/api/health", async (_req: Request, res: Response) => {
+  try {
+    const redisHealthy = await checkRedisHealth();
+    const queueHealth = await QueueService.getHealthStatus();
+    const queueStats = await QueueService.getQueueStats();
+    
+    const health = {
+      status: redisHealthy && queueHealth.status === 'healthy' ? 'ok' : 'degraded',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      version: "1.0.0",
+      services: {
+        redis: {
+          status: redisHealthy ? 'connected' : 'disconnected',
+          ...getRedisStatus(),
+        },
+        queue: queueHealth,
+        metrics: {
+          totalJobs: queueStats.totalJobsProcessed + queueStats.totalJobsFailed,
+          failureRate: queueStats.failureRate,
+          queueUtilization: queueStats.currentQueueUtilization,
+        },
+      },
+    };
+
+    const statusCode = health.status === 'ok' ? 200 : 503;
+    res.status(statusCode).json(health);
+  } catch (error) {
+    console.error("Health check error:", error);
+    res.status(503).json({
+      status: "error",
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      version: "1.0.0",
+      error: "Health check failed",
+    });
+  }
 });
 
 // Legacy endpoints (keeping for backward compatibility)
@@ -61,6 +92,40 @@ app.get(
   }
 );
 
+app.get(
+  "/api/queue/health",
+  authenticateUser,
+  rateLimit(30),
+  async (_req: Request, res: Response) => {
+    try {
+      const health = await QueueService.getHealthStatus();
+      res.json({ success: true, data: health });
+    } catch (error) {
+      console.error("Error getting queue health:", error);
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to get queue health" });
+    }
+  }
+);
+
+app.get(
+  "/api/queue/metrics",
+  authenticateUser,
+  rateLimit(30),
+  async (_req: Request, res: Response) => {
+    try {
+      const metrics = QueueService.getPerformanceMetrics();
+      res.json({ success: true, data: metrics });
+    } catch (error) {
+      console.error("Error getting queue metrics:", error);
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to get queue metrics" });
+    }
+  }
+);
+
 app.post(
   "/api/queue/clean",
   authenticateUser,
@@ -75,6 +140,132 @@ app.post(
     }
   }
 );
+
+app.post(
+  "/api/queue/scale",
+  authenticateUser,
+  rateLimit(5),
+  async (req: Request, res: Response) => {
+    try {
+      const { concurrency } = req.body;
+      if (typeof concurrency !== 'number' || concurrency < 1 || concurrency > 10) {
+        return res.status(400).json({
+          success: false,
+          error: "Concurrency must be a number between 1 and 10",
+        });
+      }
+      
+      await QueueService.adjustConcurrency(concurrency);
+      res.json({ success: true, message: `Concurrency adjusted to ${concurrency}` });
+    } catch (error) {
+      console.error("Error adjusting concurrency:", error);
+      res.status(500).json({ success: false, error: "Failed to adjust concurrency" });
+    }
+  }
+);
+
+app.post(
+  "/api/queue/pause",
+  authenticateUser,
+  rateLimit(5),
+  async (_req: Request, res: Response) => {
+    try {
+      await QueueService.pauseQueue();
+      res.json({ success: true, message: "Queue paused successfully" });
+    } catch (error) {
+      console.error("Error pausing queue:", error);
+      res.status(500).json({ success: false, error: "Failed to pause queue" });
+    }
+  }
+);
+
+app.post(
+  "/api/queue/resume",
+  authenticateUser,
+  rateLimit(5),
+  async (_req: Request, res: Response) => {
+    try {
+      await QueueService.resumeQueue();
+      res.json({ success: true, message: "Queue resumed successfully" });
+    } catch (error) {
+      console.error("Error resuming queue:", error);
+      res.status(500).json({ success: false, error: "Failed to resume queue" });
+    }
+  }
+);
+
+// Comprehensive monitoring dashboard
+app.get(
+  "/api/monitoring/dashboard",
+  authenticateUser,
+  rateLimit(10),
+  async (_req: Request, res: Response) => {
+    try {
+      const [health, stats, metrics, redisStatus] = await Promise.all([
+        QueueService.getHealthStatus(),
+        QueueService.getQueueStats(),
+        QueueService.getPerformanceMetrics(),
+        getRedisStatus(),
+      ]);
+
+      const dashboard = {
+        timestamp: new Date().toISOString(),
+        system: {
+          uptime: process.uptime(),
+          memory: process.memoryUsage(),
+          cpu: process.cpuUsage(),
+        },
+        redis: redisStatus,
+        queue: {
+          health,
+          stats,
+          metrics,
+        },
+        alerts: generateAlerts(health, stats, redisStatus),
+      };
+
+      res.json({ success: true, data: dashboard });
+    } catch (error) {
+      console.error("Error getting monitoring dashboard:", error);
+      res.status(500).json({ success: false, error: "Failed to get monitoring dashboard" });
+    }
+  }
+);
+
+// Helper function to generate alerts
+function generateAlerts(health: any, stats: any, redisStatus: any): string[] {
+  const alerts: string[] = [];
+
+  if (!redisStatus.isConnected) {
+    alerts.push("🚨 Redis connection is down");
+  }
+
+  if (health.status === 'unhealthy') {
+    alerts.push("🚨 Queue system is unhealthy");
+  }
+
+  if (stats.failureRate > 10) {
+    alerts.push(`⚠️ High failure rate: ${stats.failureRate}%`);
+  }
+
+  if (stats.currentQueueUtilization > 90) {
+    alerts.push(`⚠️ Queue utilization is high: ${stats.currentQueueUtilization}%`);
+  }
+
+  if (stats.waiting > 50) {
+    alerts.push(`⚠️ High number of waiting jobs: ${stats.waiting}`);
+  }
+
+  if (redisStatus.circuitBreakerOpen) {
+    alerts.push("🚨 Redis circuit breaker is open");
+  }
+
+  if (alerts.length === 0) {
+    alerts.push("✅ All systems operational");
+  }
+
+  return alerts;
+}
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: any) => {
@@ -99,21 +290,32 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
 // });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Litmus AI API running at http://localhost:${PORT}`);
   console.log(`📊 Queue system initialized`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  
+  // Initialize monitoring and auto-scaling
+  try {
+    startMonitoring();
+    startAutoScaling();
+    console.log(`🔄 Auto-scaling and monitoring started`);
+  } catch (error) {
+    console.error("❌ Failed to start monitoring:", error);
+  }
 });
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("🔄 Shutting down server...");
   await QueueService.shutdown();
+  await closeRedisConnection();
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
   console.log("🔄 Shutting down server...");
   await QueueService.shutdown();
+  await closeRedisConnection();
   process.exit(0);
 });
