@@ -31,8 +31,12 @@ export async function processAnalysisJob(
   job: Job<AnalysisJobData>
 ): Promise<AnalysisJobResult> {
   const { userId, input, inputType, url, text, dbJobId } = job.data;
+  const startTime = Date.now();
 
-  // processing started
+  // Set up job timeout
+  const timeout = setTimeout(() => {
+    console.warn(`⚠️ Job ${job.id} is taking longer than expected`);
+  }, 4 * 60 * 1000); // 4 minutes warning
 
   try {
     // Update job status to RUNNING in database (use dbJobId, not queue job id)
@@ -140,6 +144,12 @@ await job.updateProgress(100);
     data: result
   });
 
+    // Clear timeout on successful completion
+    clearTimeout(timeout);
+    
+    const processingTime = Date.now() - startTime;
+    console.log(`✅ Job ${job.id} completed in ${processingTime}ms`);
+
     return {
       jobId: parseInt(job.id as string),
       status: "completed",
@@ -147,7 +157,11 @@ await job.updateProgress(100);
       scrapedText,
     };
   } catch (error) {
-  console.error(`Job ${job.id} (DB: ${dbJobId}) failed:`, error);
+    // Clear timeout on error
+    clearTimeout(timeout);
+    
+    const processingTime = Date.now() - startTime;
+    console.error(`Job ${job.id} (DB: ${dbJobId}) failed after ${processingTime}ms:`, error);
 
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
