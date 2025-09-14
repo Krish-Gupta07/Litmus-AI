@@ -31,7 +31,7 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions))
+app.options(/(.*)/, cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 
@@ -105,7 +105,7 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
 });
 
 // 404 handler
-// app.use("*", (req: Request, res: Response) => {
+// app.use(/(.*)/, (req: Request, res: Response) => {
 //   res.status(404).json({
 //     success: false,
 //     error: "Endpoint not found",
