@@ -16,8 +16,23 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "https://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim());
+
+const corsOptions = {
+  origin(origin: string | undefined, cb: (err: Error | null, ok?: boolean) => void) {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, // if you want to allow cookies or auth headers
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
+app.options(/(.*)/, cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 
@@ -281,7 +296,7 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
 });
 
 // 404 handler
-// app.use("*", (req: Request, res: Response) => {
+// app.use(/(.*)/, (req: Request, res: Response) => {
 //   res.status(404).json({
 //     success: false,
 //     error: "Endpoint not found",

@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { CommandIcon, SearchIcon, LogInIcon, PlusIcon } from 'lucide-react';
+import { CommandIcon, SearchIcon, LogInIcon, PlusIcon, Loader2Icon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
 import { Button } from './ui/button';
@@ -23,6 +23,9 @@ import Logo from '../../public/icons/logo';
 import { useRouter } from 'next/navigation';
 import { mockResponses } from '@/lib/mockResponse';
 import SidebarChatCard from './sidebar-chat-card';
+import { getApi } from '@/helpers/api';
+import { apiEndPoints } from '@/helpers/apiEndpoints';
+import { AnalysisData } from '@/types/analysis';
 
 export function AppSidebar() {
   const router = useRouter();
@@ -30,16 +33,19 @@ export function AppSidebar() {
   const [searchQuery, setSearchQuery] = useState('');
   const { user } = useUser();
   const { isMobile, setOpen, setOpenMobile } = useSidebar();
+  const [analysis, setAnalysis] = useState<AnalysisData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredAnalysis = mockResponses.filter((analysis) => {
+  const filteredAnalysis = analysis.filter((item) => {
     if (!searchQuery) return true;
 
     const query = searchQuery.toLowerCase();
     return (
-      analysis.payload.title.toLowerCase().includes(query) ||
-      analysis.payload.body.toLowerCase().includes(query) ||
-      analysis.inputType.toLowerCase().includes(query) ||
-      analysis.status.toLowerCase().includes(query)
+      item.result.title.toLowerCase().includes(query) ||
+      item.result.description.toLowerCase().includes(query) ||
+      (item.scrapedText || '').toLowerCase().includes(query) ||
+      item.status.toLowerCase().includes(query)
     );
   });
 
@@ -54,6 +60,25 @@ export function AppSidebar() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      setLoading(true);
+      const { status, data } = await getApi(
+        apiEndPoints.analysis.jobs(user?.id || 'user_32GzfZwvg2MNTAFRhPOrMxYdTu2'),
+      );
+      setLoading(false);
+
+      if (status === 200) {
+        setAnalysis(data);
+        console.log(data);
+      } else {
+        setError('Failed to fetch analysis');
+      }
+    };
+
+    fetchAnalysis();
+  }, [user?.id]);
 
   return (
     <Sidebar>
@@ -116,9 +141,16 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <div className="space-y-3">
-                  {filteredAnalysis.length > 0 ? (
+                  {loading ? (
+                    <SidebarMenuItem>
+                      <div className="py-8 text-center">
+                        <Loader2Icon size={32} className="text-muted-foreground mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">Loading...</p>
+                      </div>
+                    </SidebarMenuItem>
+                  ) : filteredAnalysis.length > 0 ? (
                     filteredAnalysis.map((analysis) => (
-                      <SidebarMenuItem key={analysis.id}>
+                      <SidebarMenuItem key={analysis.jobId}>
                         {/* main card component here*/}
                         <SidebarChatCard analysis={analysis} />
                       </SidebarMenuItem>

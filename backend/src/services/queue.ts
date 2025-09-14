@@ -186,18 +186,24 @@ export class QueueService {
 
     const state = await job.getState();
     const progress = job.progress;
-    const result = await job.returnvalue;
+    const analysis = (await job.returnvalue) ?? {
+      jobId: parseInt(job.id as string),
+      status: state === "failed" ? "failed" : "pending",
+    };
     const failedReason = job.failedReason;
+    const timeToComplete = job.finishedOn ? job.finishedOn - job.timestamp : null;
 
     return {
-      jobId,
-      state,
-      progress,
-      result,
+      analysis,
       failedReason,
-      timestamp: job.timestamp,
-      processedOn: job.processedOn,
-      finishedOn: job.finishedOn,
+      metadata: {
+        timestamp: job.timestamp,
+        processedOn: job.processedOn,
+        finishedOn: job.finishedOn,
+        timeToComplete,
+        ...(state && { state }),
+        ...(typeof progress === "number" ? { progress } : {}),
+      },
     };
   }
 
