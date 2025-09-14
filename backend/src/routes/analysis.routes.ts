@@ -29,6 +29,7 @@ router.post('/analyze', async (req: Request, res: Response) => {
     const validationResult = analyzeRequestSchema.safeParse(req.body);
     if (!validationResult.success) {
       return res.status(400).json({
+        status: 400,
         success: false,
         error: 'Invalid request data',
         details: validationResult.error.errors,
@@ -44,6 +45,7 @@ router.post('/analyze', async (req: Request, res: Response) => {
 
     if (!user) {
       return res.status(404).json({
+        status: 404,
         success: false,
         error: 'User not found',
       });
@@ -69,6 +71,7 @@ router.post('/analyze', async (req: Request, res: Response) => {
     console.log(`📝 Created analysis job: DB ID ${dbJobId}, Queue ID ${queueJob.id}`);
 
     return res.status(202).json({
+      status: 202,
       success: true,
       data: {
         jobId: queueJob.id,
@@ -82,6 +85,7 @@ router.post('/analyze', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating analysis job:', error);
     return res.status(500).json({
+      status: 500,
       success: false,
       error: 'Failed to create analysis job',
     });
@@ -100,6 +104,7 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
     const validationResult = jobStatusSchema.safeParse({ jobId });
     if (!validationResult.success) {
       return res.status(400).json({
+        status: 400,
         success: false,
         error: 'Invalid job ID',
       });
@@ -110,6 +115,7 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
     
     if (data.error) {
       return res.status(404).json({
+        status: 404,
         success: false,
         error: 'Job not found',
       });
@@ -130,6 +136,7 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
 
     return res.status(200).json({
       status: 200,
+      success: true,
       data,
       // data: {
         // jobId,
@@ -143,6 +150,7 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
     console.error('Error getting job status:', error);
     return res.status(500).json({
       status: 500,
+      success: false,
       error: 'Failed to get job status',
     });
   }
@@ -158,6 +166,7 @@ router.get('/jobs/:userId', async (req: Request, res: Response) => {
     
     if (!userId) {
       return res.status(400).json({
+        status: 400,
         success: false,
         error: 'Invalid user ID',
       });
@@ -176,6 +185,7 @@ router.get('/jobs/:userId', async (req: Request, res: Response) => {
     });
 
     return res.status(200).json({
+      status: 200,
       success: true,
       data: {
         jobs,
@@ -186,6 +196,7 @@ router.get('/jobs/:userId', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error getting user jobs:', error);
     return res.status(500).json({
+      status: 500,
       success: false,
       error: 'Failed to get user jobs',
     });
@@ -201,6 +212,7 @@ router.get('/queue/stats', async (req: Request, res: Response) => {
     const stats = await QueueService.getQueueStats();
     
     return res.status(200).json({
+      status: 200,
       success: true,
       data: stats,
     });
@@ -208,6 +220,7 @@ router.get('/queue/stats', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error getting queue stats:', error);
     return res.status(500).json({
+      status: 500,
       success: false,
       error: 'Failed to get queue statistics',
     });
@@ -223,6 +236,7 @@ router.post('/queue/clean', async (req: Request, res: Response) => {
     await QueueService.cleanOldJobs();
     
     return res.status(200).json({
+      status: 200,
       success: true,
       message: 'Queue cleaned successfully',
     });
@@ -230,6 +244,7 @@ router.post('/queue/clean', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error cleaning queue:', error);
     return res.status(500).json({
+      status: 500,
       success: false,
       error: 'Failed to clean queue',
     });

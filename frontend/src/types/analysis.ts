@@ -7,7 +7,7 @@ export interface AnalysisResponse {
       result: {
         title: string;
         description: string;
-        credibilityScore: number;
+        credibilityScore?: number;
         searchTopics: {
           entities: string[];
           concepts: string[];
@@ -15,13 +15,14 @@ export interface AnalysisResponse {
         };
         ragQuestions: string;
       };
-      scrapedText: string;
+      scrapedText?: string;
     };
+    failedReason?: string;
     metadata: {
-      timestamp: number;
-      processedOn: number;
-      finishedOn: number;
-      timeToComplete: number;
+      timestamp?: number;
+      processedOn?: number;
+      finishedOn?: number;
+      timeToComplete?: number;
     };
   };
 }
@@ -32,7 +33,7 @@ export interface AnalysisData {
   result: {
     title: string;
     description: string;
-    credibilityScore: number;
+    credibilityScore?: number;
     searchTopics: {
       entities: string[];
       concepts: string[];
@@ -40,12 +41,13 @@ export interface AnalysisData {
     };
     ragQuestions: string;
   };
-  scrapedText: string;
+  scrapedText?: string;
+  failedReason?: string;
 }
 
 export interface AnalysisMetadata {
-  timestamp: number;
-  processedOn: number;
-  finishedOn: number;
-  timeToComplete: number;
+  timestamp?: number;
+  processedOn?: number;
+  finishedOn?: number;
+  timeToComplete?: number;
 }

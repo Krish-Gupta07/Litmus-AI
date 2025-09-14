@@ -37,15 +37,15 @@ export function AppSidebar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const filteredAnalysis = mockResponses.filter((analysis) => {
+  const filteredAnalysis = analysis.filter((item) => {
     if (!searchQuery) return true;
 
     const query = searchQuery.toLowerCase();
     return (
-      analysis.payload.title.toLowerCase().includes(query) ||
-      analysis.payload.body.toLowerCase().includes(query) ||
-      analysis.inputType.toLowerCase().includes(query) ||
-      analysis.status.toLowerCase().includes(query)
+      item.result.title.toLowerCase().includes(query) ||
+      item.result.description.toLowerCase().includes(query) ||
+      (item.scrapedText || '').toLowerCase().includes(query) ||
+      item.status.toLowerCase().includes(query)
     );
   });
 
@@ -63,9 +63,10 @@ export function AppSidebar() {
 
   useEffect(() => {
     const fetchAnalysis = async () => {
-
       setLoading(true);
-      const { status, data } = await getApi(apiEndPoints.analysis.jobs(user?.id || 'user_32GzfZwvg2MNTAFRhPOrMxYdTu2'));
+      const { status, data } = await getApi(
+        apiEndPoints.analysis.jobs(user?.id || 'user_32GzfZwvg2MNTAFRhPOrMxYdTu2'),
+      );
       setLoading(false);
 
       if (status === 200) {
@@ -149,7 +150,7 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                   ) : filteredAnalysis.length > 0 ? (
                     filteredAnalysis.map((analysis) => (
-                      <SidebarMenuItem key={analysis.id}>
+                      <SidebarMenuItem key={analysis.jobId}>
                         {/* main card component here*/}
                         <SidebarChatCard analysis={analysis} />
                       </SidebarMenuItem>

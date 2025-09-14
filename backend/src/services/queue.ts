@@ -85,16 +85,16 @@ export class QueueService {
       return { error: "Job not found" };
     }
 
-    // const state = await job.getState();
-    // const progress = job.progress;
-    const analysis = await job.returnvalue;
+    const state = await job.getState();
+    const progress = job.progress;
+    const analysis = (await job.returnvalue) ?? {
+      jobId: parseInt(job.id as string),
+      status: state === "failed" ? "failed" : "pending",
+    };
     const failedReason = job.failedReason;
     const timeToComplete = job.finishedOn ? job.finishedOn - job.timestamp : null;
 
     return {
-      // jobId,
-      // state,
-      // progress,
       analysis,
       failedReason,
       metadata: {
@@ -102,6 +102,8 @@ export class QueueService {
         processedOn: job.processedOn,
         finishedOn: job.finishedOn,
         timeToComplete,
+        ...(state && { state }),
+        ...(typeof progress === "number" ? { progress } : {}),
       },
     };
   }

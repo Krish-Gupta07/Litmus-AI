@@ -28,35 +28,43 @@ import type { AnalysisResponse, AnalysisData, AnalysisMetadata } from '@/types/a
 
 export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
-  const idNumber = parseInt(id);
+  const idNumber = Number(id);
   const [responseData, setResponseData] = useState<AnalysisData | null>(null);
   const [metadata, setMetadata] = useState<AnalysisMetadata | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!Number.isFinite(idNumber)) {
+      setError('Invalid job id');
+      setIsLoading(false);
+      return;
+    }
+
     const fetchAnalysis = async () => {
       setIsLoading(true);
       const timestamp = new Date().getTime();
       const response = await getApi(`${apiEndPoints.analysis.status(idNumber)}?t=${timestamp}`);
 
-      if (response.status === 200) {
-        const apiResponse: AnalysisResponse = response.data;
-        if (apiResponse.status === 200 && apiResponse.data) {
-          setResponseData(apiResponse.data.analysis);
-          setMetadata(apiResponse.data.metadata);
+      if (response.status === 200 && response.data) {
+        const data = response.data as any;
+        if (data.analysis && data.metadata) {
+          setResponseData(data.analysis);
+          setMetadata(data.metadata);
         } else {
-          setError('Failed to fetch analysis data');
+          setError('Malformed response');
         }
       } else {
-        setError('Failed to fetch analysis data');
+        setError(
+          typeof response.data === 'string' ? response.data : 'Failed to fetch analysis data',
+        );
       }
 
       setIsLoading(false);
     };
 
     fetchAnalysis();
-  }, [id]);
+  }, [idNumber]);
 
   if (isLoading) {
     return <div className="mx-auto mt-10 mb-20 max-w-2xl">Loading...</div>;
