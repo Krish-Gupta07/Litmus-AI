@@ -1,5 +1,5 @@
-import axios from 'axios';
-import * as dotenv from 'dotenv';
+import axios from "axios";
+import * as dotenv from "dotenv";
 
 dotenv.config();
 
@@ -7,9 +7,9 @@ const WHATSAPP_API_URL = `https://graph.facebook.com/${process.env.WHATSAPP_VERS
 const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 
 interface TextMessage {
-  messaging_product: 'whatsapp';
+  messaging_product: "whatsapp";
   to: string;
-  type: 'text';
+  type: "text";
   text: {
     body: string;
   };
@@ -19,12 +19,12 @@ export class MetaWhatsAppClient {
   static async sendTextMessage(to: string, message: string): Promise<boolean> {
     try {
       const payload: TextMessage = {
-        messaging_product: 'whatsapp',
+        messaging_product: "whatsapp",
         to,
-        type: 'text',
+        type: "text",
         text: {
-          body: message
-        }
+          body: message,
+        },
       };
 
       const response = await axios.post(
@@ -32,17 +32,16 @@ export class MetaWhatsAppClient {
         payload,
         {
           headers: {
-            'Authorization': `Bearer ${ACCESS_TOKEN}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${ACCESS_TOKEN}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
-      console.log(`✅ Message sent to ${to}`);
+      console.log(`Message sent to ${to}`);
       return true;
-
     } catch (error) {
-      console.error('❌ Error sending WhatsApp message:', error);
+      console.error("Error sending WhatsApp message:", error);
       return false;
     }
   }
@@ -52,19 +51,19 @@ export class MetaWhatsAppClient {
       await axios.post(
         `${WHATSAPP_API_URL}/messages`,
         {
-          messaging_product: 'whatsapp',
-          status: 'read',
-          message_id: messageId
+          messaging_product: "whatsapp",
+          status: "read",
+          message_id: messageId,
         },
         {
           headers: {
-            'Authorization': `Bearer ${ACCESS_TOKEN}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${ACCESS_TOKEN}`,
+            "Content-Type": "application/json",
+          },
         }
       );
     } catch (error) {
-      console.error('❌ Error marking message as read:', error);
+      console.error("Error marking message as read:", error);
     }
   }
 }
@@ -76,5 +75,5 @@ export const metaClient = {
 
   async markAsRead(messageId: string): Promise<void> {
     return MetaWhatsAppClient.markAsRead(messageId);
-  }
+  },
 };
