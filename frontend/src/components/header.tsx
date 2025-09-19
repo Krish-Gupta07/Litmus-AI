@@ -4,6 +4,7 @@ import { UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import Logo from '../../public/icons/logo';
 import { SidebarTrigger } from './ui/sidebar';
+import { Sidebar } from './ui/sidebar';
 
 // interface Props {
 //   onNewChat: () => void;
@@ -23,12 +24,14 @@ export default function Header() {
             New
           </span>
         </button> */}
-        <div className="flex items-center gap-2 group">
-          <Logo size={24} className='group-hover:hidden'/>
-          <SidebarTrigger className='group-hover:block hidden rounded-full pl-[6px]'/>
-          <Link href="/" className="font-medium">
-            Litmus AI
-          </Link>
+        <div className="flex items-center gap-4">
+          <div className='flex items-center gap-2'>
+            <Logo size={24} />
+            <Link href="/" className="font-medium">
+              Litmus AI
+            </Link>
+          </div>
+          <SidebarTrigger className=''/>
         </div>
         <div className="flex items-center gap-2">
           <ModeToggle />

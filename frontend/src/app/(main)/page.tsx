@@ -3,35 +3,51 @@
 import { useState } from 'react';
 import ChatInput from '@/components/chat-input';
 import { useRouter } from 'next/navigation';
+import { postApi } from '@/helpers/api';
+import { useUser } from '@clerk/nextjs';
+import { toast } from 'sonner';
+
+interface IPayload {
+  url?: string;
+  text?: string;
+  userId: string;
+}
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; cached: boolean }>({
-    text: '',
-    cached: false,
-  });
   const router = useRouter();
+  const { user } = useUser();
 
-  const mockResponse = {
-    id: crypto.randomUUID(),
-    status: 'success',
-    payload: {
-      title: 'AI in Healthcare Report',
-      body: 'Well-structured report with moderate technical accuracy',
-    },
-    message: 'Content analyzed successfully',
-  };
-
-  const handleSendMessage = async (message: string, cacheMode: boolean) => {
-    console.log('Sending message:', { message, cacheMode });
-
-    setMessage({ text: message, cached: cacheMode });
+  const handleSendMessage = async (input: string) => {
+    if (user?.id === null || user?.id === undefined || !user?.id) {
+      toast.error('User not found. Cannot send message.');
+      return;
+    }
 
     setIsLoading(true);
-    await new Promise((resolve) => {
-      setTimeout(resolve, 2000);
-      router.push(`/chat/${mockResponse.id}`);
-    });
+
+    let payload: IPayload;
+
+    try {
+      new URL(input);
+      payload = { url: input, userId: user.id };
+    } catch (error) {
+      payload = { text: input, userId: user.id };
+    }
+
+    console.log('Payload', payload);
+
+    const response = await postApi('/api/analysis/analyze', payload);
+
+    if (response.status !== 202) {
+      console.error('Failed to queue analysis job:', { response: response.data, status: response.status });
+      toast.error('Failed to queue analysis job.');
+      setIsLoading(false);
+      return;
+    }
+
+    toast.success('Analysis job queued successfully.');
+    router.push(`/chat/${response.data.data.jobId}`);
 
     setIsLoading(false);
   };

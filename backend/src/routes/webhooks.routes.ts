@@ -17,7 +17,9 @@ interface WebhookEvent {
 
 // Clerk webhook endpoint
 router.post('/clerk', async (req, res) => {
-  
+
+  console.log('Clerk webhook received');
+
   try {
     const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
     
@@ -30,20 +32,16 @@ router.post('/clerk', async (req, res) => {
     const svix_timestamp = req.headers['svix-timestamp'] as string;
     const svix_signature = req.headers['svix-signature'] as string;
 
-    // If there are no headers, error out
     if (!svix_id || !svix_timestamp || !svix_signature) {
       return res.status(400).json({ error: 'Missing svix headers' });
     }
 
-    // Get the body
-    const body = JSON.stringify(req.body);
+    // Get the raw body (Buffer) and verify
+    const body = req.body instanceof Buffer ? req.body : Buffer.from(req.body);
 
-    // Create a new Svix instance with your secret.
     const wh = new Webhook(WEBHOOK_SECRET);
-
     let evt: WebhookEvent;
 
-    // Verify the payload with the headers
     try {
       evt = wh.verify(body, {
         'svix-id': svix_id,
