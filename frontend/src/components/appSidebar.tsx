@@ -21,11 +21,10 @@ import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/n
 import { Button } from './ui/button';
 import Logo from '../../public/icons/logo';
 import { useRouter } from 'next/navigation';
-import { mockResponses } from '@/lib/mockResponse';
 import SidebarChatCard from './sidebar-chat-card';
 import { getApi } from '@/helpers/api';
 import { apiEndPoints } from '@/helpers/apiEndpoints';
-import { AnalysisData } from '@/types/analysis';
+import { AnalysisData, Job } from '@/types/analysis';
 
 export function AppSidebar() {
   const router = useRouter();
@@ -33,21 +32,21 @@ export function AppSidebar() {
   const [searchQuery, setSearchQuery] = useState('');
   const { user } = useUser();
   const { isMobile, setOpen, setOpenMobile } = useSidebar();
-  const [analysis, setAnalysis] = useState<AnalysisData[]>([]);
+  const [analysis, setAnalysis] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const filteredAnalysis = analysis.filter((item) => {
-    if (!searchQuery) return true;
+  // const filteredAnalysis = analysis.filter((item) => {
+  //   if (!searchQuery) return true;
 
-    const query = searchQuery.toLowerCase();
-    return (
-      item.result.title.toLowerCase().includes(query) ||
-      item.result.description.toLowerCase().includes(query) ||
-      (item.scrapedText || '').toLowerCase().includes(query) ||
-      item.status.toLowerCase().includes(query)
-    );
-  });
+  //   const query = searchQuery.toLowerCase();
+  //   return (
+  //     item.result.title.toLowerCase().includes(query) ||
+  //     item.result.description.toLowerCase().includes(query) ||
+  //     (item.scrapedText || '').toLowerCase().includes(query) ||
+  //     item.status.toLowerCase().includes(query)
+  //   );
+  // });
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -62,19 +61,25 @@ export function AppSidebar() {
   }, []);
 
   useEffect(() => {
+    if (!user?.id) return;
+
     const fetchAnalysis = async () => {
       setLoading(true);
-      const { status, data } = await getApi(
-        apiEndPoints.analysis.jobs(user?.id || 'user_32GzfZwvg2MNTAFRhPOrMxYdTu2'),
+      const response = await getApi(
+        apiEndPoints.analysis.jobs(user.id),
       );
+
+      console.log(response.data);
       setLoading(false);
 
-      if (status === 200) {
-        setAnalysis(data);
-        console.log(data);
-      } else {
-        setError('Failed to fetch analysis');
-      }
+     if (response.status !== 200) {
+      setError('Failed to fetch analysis');
+      setLoading(false);
+      return;
+     }
+
+     setAnalysis(response.data.jobs);
+     setLoading(false);
     };
 
     fetchAnalysis();
@@ -148,11 +153,11 @@ export function AppSidebar() {
                         <p className="text-muted-foreground text-sm">Loading...</p>
                       </div>
                     </SidebarMenuItem>
-                  ) : filteredAnalysis.length > 0 ? (
-                    filteredAnalysis.map((analysis) => (
-                      <SidebarMenuItem key={analysis.jobId}>
+                  ) : analysis.length > 0 ? (
+                    analysis.map((job) => (
+                      <SidebarMenuItem key={job.id}>
                         {/* main card component here*/}
-                        <SidebarChatCard analysis={analysis} />
+                        <SidebarChatCard analysis={job} />
                       </SidebarMenuItem>
                     ))
                   ) : (

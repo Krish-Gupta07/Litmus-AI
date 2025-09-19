@@ -1,29 +1,26 @@
 export interface AnalysisResponse {
-  status: number;
-  data: {
-    analysis: {
-      jobId: number;
-      status: 'pending' | 'running' | 'completed' | 'failed';
-      result: {
-        title: string;
-        description: string;
-        credibilityScore?: number;
-        searchTopics: {
-          entities: string[];
-          concepts: string[];
-          claims: string[];
-        };
-        ragQuestions: string;
+  analysis: {
+    jobId: number;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    result: {
+      title: string;
+      description: string;
+      credibilityScore?: number;
+      searchTopics: {
+        entities: string[];
+        concepts: string[];
+        claims: string[];
       };
-      scrapedText?: string;
+      ragQuestions: string;
     };
-    failedReason?: string;
-    metadata: {
-      timestamp?: number;
-      processedOn?: number;
-      finishedOn?: number;
-      timeToComplete?: number;
-    };
+    scrapedText?: string;
+  };
+  failedReason?: string;
+  metadata: {
+    timestamp?: number;
+    processedOn?: number;
+    finishedOn?: number;
+    timeToComplete?: number;
   };
 }
 
@@ -50,4 +47,19 @@ export interface AnalysisMetadata {
   processedOn?: number;
   finishedOn?: number;
   timeToComplete?: number;
+}
+
+export interface Job {
+  id: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  input: string;
+  result: string;
+  createdAt: string;
+}
+
+export interface JobsResponse {
+  success: boolean;
+  data: {
+    jobs: Job[];
+  };
 }

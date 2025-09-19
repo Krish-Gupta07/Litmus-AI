@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 interface ChatInputProps {
-  onSendMessage: (message: string, thinkingMode: boolean) => void;
+  onSendMessage: (message: string) => void;
   isLoading?: boolean;
   placeholder?: string;
   disabled?: boolean;
@@ -27,7 +27,6 @@ export default function ChatInput({
   className,
 }: ChatInputProps) {
   const [message, setMessage] = useState('');
-  const [cacheMode, setCacheMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputType, setInputType] = useState<'text' | 'url'>('text');
 
@@ -47,7 +46,7 @@ export default function ChatInput({
     e.preventDefault();
     if (!message.trim() || isLoading || disabled) return;
 
-    onSendMessage(message.trim(), cacheMode);
+    onSendMessage(message.trim());
     setMessage('');
   };
 
@@ -118,7 +117,6 @@ export default function ChatInput({
         </p>
         <textarea
           ref={textareaRef}
-          value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={
@@ -142,8 +140,8 @@ export default function ChatInput({
         <div className="flex items-center gap-2">
           <Checkbox
             id="cache-mode"
-            checked={cacheMode}
-            onCheckedChange={(checked) => setCacheMode(checked as boolean)}
+            checked={false}
+            onCheckedChange={() => {}}
             disabled={disabled || isLoading}
             className="data-[state=checked]:!bg-accent data-[state=checked]:!border-accent"
           />
