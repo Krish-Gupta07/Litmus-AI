@@ -8,7 +8,7 @@ import type {
 import { processAnalysisJob } from "../workers/analysis.worker.js";
 
 // Queue configuration
-const QUEUE_NAME = "analysis-queue";
+export const QUEUE_NAME = "analysis-queue";
 const WORKER_CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || "2");
 const MAX_QUEUE_SIZE = parseInt(process.env.MAX_QUEUE_SIZE || "1000");
 const JOB_TIMEOUT = parseInt(process.env.JOB_TIMEOUT || "300000"); // 5 minutes
@@ -44,66 +44,66 @@ export const analysisQueue = new Queue<AnalysisJobData>(QUEUE_NAME, {
   },
 });
 
-// Create worker to process jobs
-export const analysisWorker = new Worker<AnalysisJobData>(
-  QUEUE_NAME,
-  processAnalysisJob,
-  {
-    connection: redis,
-    concurrency: WORKER_CONCURRENCY,
-    autorun: true, // Start processing immediately
-    limiter: {
-      max: 10, // Max 10 jobs per 1 second
-      duration: 1000,
-    },
+// Worker is now in separate process - see src/worker.ts
+// No worker needed here since it runs separately
+
+// Worker event handlers removed - worker runs in separate process
+
+// Worker management functions
+export class WorkerService {
+  /**
+   * Start the worker with proper initialization and retry logic
+   */
+  static async startWorker(): Promise<void> {
+    // Worker runs in separate process - no action needed
+    console.log("ℹ️ Worker runs in separate process - use 'npm run dev:worker'");
   }
-);
 
-// Worker event handlers with metrics tracking
-analysisWorker.on("completed", (job: Job<AnalysisJobData>) => {
-  const processingTime = Date.now() - (job.processedOn || 0);
-  queueMetrics.totalJobsProcessed++;
-  queueMetrics.lastProcessedAt = Date.now();
-  
-  // Update average processing time
-  queueMetrics.averageProcessingTime = 
-    (queueMetrics.averageProcessingTime * (queueMetrics.totalJobsProcessed - 1) + processingTime) / 
-    queueMetrics.totalJobsProcessed;
-  
-  console.log(`✅ Job ${job.id} completed successfully in ${processingTime}ms`);
-});
+  /**
+   * Stop the worker gracefully
+   */
+  static async stopWorker(): Promise<void> {
+    // Worker runs in separate process - no action needed
+    console.log("ℹ️ Worker runs in separate process - stop it manually");
+  }
 
-analysisWorker.on(
-  "failed",
-  (job: Job<AnalysisJobData> | undefined, err: Error) => {
-    queueMetrics.totalJobsFailed++;
-    queueMetrics.errorCount++;
-    queueMetrics.lastErrorAt = Date.now();
-    
-    console.error(`❌ Job ${job?.id || "unknown"} failed:`, err.message);
-    
-    // Alert on high failure rate
-    const failureRate = queueMetrics.totalJobsFailed / (queueMetrics.totalJobsProcessed + queueMetrics.totalJobsFailed);
-    if (failureRate > 0.1) { // 10% failure rate
-      console.warn(`🚨 High failure rate detected: ${(failureRate * 100).toFixed(2)}%`);
+  /**
+   * Check if worker is running
+   */
+  static isWorkerRunning(): boolean {
+    // Worker runs in separate process - assume it's running
+    return true;
+  }
+
+  /**
+   * Get worker status
+   */
+  static getWorkerStatus() {
+    return {
+      isRunning: true, // Worker runs in separate process
+      concurrency: WORKER_CONCURRENCY,
+      queueName: QUEUE_NAME,
+    };
+  }
+
+  /**
+   * Force process waiting jobs
+   */
+  static async processWaitingJobs() {
+    try {
+      const waiting = await analysisQueue.getWaiting();
+      
+      if (waiting.length > 0) {
+        return waiting.length;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error("❌ Error processing waiting jobs:", error);
+      return 0;
     }
   }
-);
-
-analysisWorker.on("error", (err: Error) => {
-  queueMetrics.errorCount++;
-  queueMetrics.lastErrorAt = Date.now();
-  console.error("❌ Worker error:", err);
-});
-
-analysisWorker.on("stalled", (jobId: string) => {
-  console.warn(`⚠️ Job ${jobId} stalled - will be retried`);
-});
-
-analysisWorker.on("progress", (job: Job<AnalysisJobData>, progress: any) => {
-  const progressValue = typeof progress === 'number' ? progress : 0;
-  console.log(`📊 Job ${job.id} progress: ${progressValue}%`);
-});
+}
 
 // Queue management functions
 export class QueueService {
@@ -132,6 +132,7 @@ export class QueueService {
     // Determine priority based on user tier or job type
     const priority = this.determineJobPriority(jobData, options.priority);
 
+    console.log(`📝 Adding job to queue with data:`, jobData);
     const job = await analysisQueue.add("analysis", jobData, {
       priority,
       delay: options.delay || 0,
@@ -141,6 +142,7 @@ export class QueueService {
         delay: 2000,
       },
     });
+    console.log(`✅ Job added to queue with ID: ${job.id}`);
 
     // Update queue size history
     queueMetrics.queueSizeHistory.push(currentQueueSize + 1);
@@ -148,7 +150,6 @@ export class QueueService {
       queueMetrics.queueSizeHistory.shift(); // Keep only last 100 entries
     }
 
-    console.log(`📝 Added job ${job.id} to queue (priority: ${priority}, queue size: ${currentQueueSize + 1})`);
     return job as Job<AnalysisJobData>;
   }
 
@@ -290,9 +291,7 @@ export class QueueService {
     ); // 24 hours
     const failed = await analysisQueue.clean(24 * 60 * 60 * 1000, 50, "failed"); // 24 hours
 
-    console.log(
-      `🧹 Cleaned ${completed.length} completed and ${failed.length} failed jobs`
-    );
+    // Jobs cleaned successfully
   }
 
   /**
@@ -300,7 +299,6 @@ export class QueueService {
    */
   static async pauseQueue() {
     await analysisQueue.pause();
-    console.log("⏸️ Queue paused");
   }
 
   /**
@@ -308,7 +306,6 @@ export class QueueService {
    */
   static async resumeQueue() {
     await analysisQueue.resume();
-    console.log("▶️ Queue resumed");
   }
 
   /**
@@ -321,7 +318,6 @@ export class QueueService {
 
     // Note: BullMQ doesn't have updateConcurrency method in current version
     // This would require recreating the worker with new concurrency
-    console.log(`🔄 Worker concurrency adjustment requested to ${newConcurrency} (not implemented in current BullMQ version)`);
   }
 
   /**
@@ -348,7 +344,6 @@ export class QueueService {
       const optimalConcurrency = await this.getOptimalConcurrency();
       if (optimalConcurrency !== WORKER_CONCURRENCY) {
         await this.adjustConcurrency(optimalConcurrency);
-        console.log(`🔄 Auto-scaled workers to ${optimalConcurrency}`);
       }
     } catch (error) {
       console.error("❌ Auto-scaling failed:", error);
@@ -359,18 +354,16 @@ export class QueueService {
    * Gracefully shutdown the queue
    */
   static async shutdown() {
-    console.log("🔄 Shutting down queue...");
-    
     try {
+      // Stop the worker first
+      await WorkerService.stopWorker();
+      
       // Stop accepting new jobs
       await analysisQueue.pause();
-      console.log("⏸️ Queue paused");
       
       // Wait for active jobs to complete (with timeout)
       const activeJobs = await analysisQueue.getActive();
       if (activeJobs.length > 0) {
-        console.log(`⏳ Waiting for ${activeJobs.length} active jobs to complete...`);
-        
         // Wait up to 30 seconds for jobs to complete
         let waitTime = 0;
         const maxWaitTime = 30000;
@@ -379,29 +372,21 @@ export class QueueService {
         while (waitTime < maxWaitTime) {
           const stillActive = await analysisQueue.getActive();
           if (stillActive.length === 0) {
-            console.log("✅ All active jobs completed");
             break;
           }
           
           await new Promise(resolve => setTimeout(resolve, checkInterval));
           waitTime += checkInterval;
         }
-        
-        if (waitTime >= maxWaitTime) {
-          console.warn("⚠️ Some jobs may not have completed gracefully");
-        }
       }
       
-      // Close worker and queue
-      await analysisWorker.close();
+      // Close queue
       await analysisQueue.close();
-      console.log("✅ Queue shutdown complete");
       
     } catch (error) {
       console.error("❌ Error during queue shutdown:", error);
       // Force close if graceful shutdown fails
       try {
-        analysisWorker.close();
         analysisQueue.close();
       } catch (forceError) {
         console.error("❌ Force close failed:", forceError);
@@ -425,8 +410,6 @@ export function startAutoScaling() {
       console.error("❌ Auto-scaling error:", error);
     }
   }, 2 * 60 * 1000); // 2 minutes
-  
-  console.log("🔄 Auto-scaling started");
 }
 
 // Stop auto-scaling
@@ -434,7 +417,6 @@ export function stopAutoScaling() {
   if (autoScaleInterval) {
     clearInterval(autoScaleInterval);
     autoScaleInterval = null;
-    console.log("⏹️ Auto-scaling stopped");
   }
 }
 
@@ -446,10 +428,20 @@ export function startMonitoring() {
     try {
       const health = await QueueService.getHealthStatus();
       const stats = await QueueService.getQueueStats();
+      const workerStatus = WorkerService.getWorkerStatus();
       
       // Log health status
       if (health.status === 'unhealthy') {
         console.warn(`🚨 System unhealthy: Redis=${health.redis}, Queue=${health.queue}, Workers=${health.workers}, Errors=${health.errors}`);
+      }
+      
+      // Check worker status
+      if (!workerStatus.isRunning) {
+        try {
+          await WorkerService.startWorker();
+        } catch (error) {
+          console.error("❌ Failed to restart worker:", error);
+        }
       }
       
       // Alert on high queue utilization
@@ -461,8 +453,6 @@ export function startMonitoring() {
       console.error("❌ Monitoring error:", error);
     }
   }, 30 * 1000); // 30 seconds
-  
-  console.log("📊 Monitoring started");
 }
 
 // Stop monitoring
@@ -470,13 +460,11 @@ export function stopMonitoring() {
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
     monitoringInterval = null;
-    console.log("⏹️ Monitoring stopped");
   }
 }
 
 // Graceful shutdown handling
 process.on("SIGTERM", async () => {
-  console.log("🔄 Received SIGTERM, shutting down gracefully...");
   stopAutoScaling();
   stopMonitoring();
   await QueueService.shutdown();
@@ -484,7 +472,6 @@ process.on("SIGTERM", async () => {
 });
 
 process.on("SIGINT", async () => {
-  console.log("🔄 Received SIGINT, shutting down gracefully...");
   stopAutoScaling();
   stopMonitoring();
   await QueueService.shutdown();

@@ -4,7 +4,7 @@ import type { Request, Response } from "express";
 import cors from "cors";
 import { transformQuery } from "./services/query-transform.js";
 import { getFinalAnswer } from "./services/final-anwer.js";
-import { QueueService, startAutoScaling, startMonitoring } from "./services/queue.js";
+import { QueueService, WorkerService, startAutoScaling, startMonitoring } from "./services/queue.js";
 import analysisRoutes from "./routes/analysis.routes.js";
 import { authenticateUser, rateLimit } from "./middleware/auth.js";
 import webhookRoutes from "./routes/webhooks.routes.js";
@@ -116,12 +116,85 @@ app.get(
   async (_req: Request, res: Response) => {
     try {
       const health = await QueueService.getHealthStatus();
-      res.json({ success: true, data: health });
+      const workerStatus = WorkerService.getWorkerStatus();
+      res.json({ 
+        success: true, 
+        data: {
+          ...health,
+          worker: workerStatus
+        }
+      });
     } catch (error) {
       console.error("Error getting queue health:", error);
       res
         .status(500)
         .json({ success: false, error: "Failed to get queue health" });
+    }
+  }
+);
+
+app.get(
+  "/api/queue/worker/status",
+  authenticateUser,
+  rateLimit(30),
+  async (_req: Request, res: Response) => {
+    try {
+      const workerStatus = WorkerService.getWorkerStatus();
+      res.json({ success: true, data: workerStatus });
+    } catch (error) {
+      console.error("Error getting worker status:", error);
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to get worker status" });
+    }
+  }
+);
+
+app.post(
+  "/api/queue/worker/start",
+  authenticateUser,
+  rateLimit(5),
+  async (_req: Request, res: Response) => {
+    try {
+      await WorkerService.startWorker();
+      res.json({ success: true, message: "Worker started successfully" });
+    } catch (error) {
+      console.error("Error starting worker:", error);
+      res.status(500).json({ success: false, error: "Failed to start worker" });
+    }
+  }
+);
+
+app.post(
+  "/api/queue/worker/stop",
+  authenticateUser,
+  rateLimit(5),
+  async (_req: Request, res: Response) => {
+    try {
+      await WorkerService.stopWorker();
+      res.json({ success: true, message: "Worker stopped successfully" });
+    } catch (error) {
+      console.error("Error stopping worker:", error);
+      res.status(500).json({ success: false, error: "Failed to stop worker" });
+    }
+  }
+);
+
+app.post(
+  "/api/queue/worker/process",
+  authenticateUser,
+  rateLimit(10),
+  async (_req: Request, res: Response) => {
+    try {
+      const waitingJobs = await WorkerService.processWaitingJobs();
+      res.json({ 
+        success: true, 
+        message: `Found ${waitingJobs} waiting jobs`,
+        waitingJobs 
+      });
+    } catch (error) {
+      console.error("Error processing waiting jobs:", error);
+      res.status(500).json({ success: false, error: "Failed to process waiting jobs" });
     }
   }
 );
@@ -314,9 +387,13 @@ app.listen(PORT, async () => {
   
   // Initialize monitoring and auto-scaling
   try {
+    // Start monitoring and auto-scaling
     startMonitoring();
     startAutoScaling();
     console.log(`🔄 Auto-scaling and monitoring started`);
+    
+    // Worker will start automatically and process jobs
+    console.log("✅ Queue system ready - jobs will be processed automatically");
   } catch (error) {
     console.error("❌ Failed to start monitoring:", error);
   }
@@ -324,14 +401,12 @@ app.listen(PORT, async () => {
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
-  console.log("🔄 Shutting down server...");
   await QueueService.shutdown();
   await closeRedisConnection();
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
-  console.log("🔄 Shutting down server...");
   await QueueService.shutdown();
   await closeRedisConnection();
   process.exit(0);

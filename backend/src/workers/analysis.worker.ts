@@ -30,12 +30,13 @@ async function notifyWhatsAppUser(userId: string, result: any) {
 export async function processAnalysisJob(
   job: Job<AnalysisJobData>
 ): Promise<AnalysisJobResult> {
+  console.log(`🚀 Starting to process job ${job.id} with data:`, job.data);
   const { userId, input, inputType, url, text, dbJobId } = job.data;
   const startTime = Date.now();
 
   // Set up job timeout
   const timeout = setTimeout(() => {
-    console.warn(`⚠️ Job ${job.id} is taking longer than expected`);
+    // Job is taking longer than expected
   }, 4 * 60 * 1000); // 4 minutes warning
 
   try {
@@ -148,7 +149,6 @@ await job.updateProgress(100);
     clearTimeout(timeout);
     
     const processingTime = Date.now() - startTime;
-    console.log(`✅ Job ${job.id} completed in ${processingTime}ms`);
 
     return {
       jobId: parseInt(job.id as string),
@@ -161,7 +161,6 @@ await job.updateProgress(100);
     clearTimeout(timeout);
     
     const processingTime = Date.now() - startTime;
-    console.error(`Job ${job.id} (DB: ${dbJobId}) failed after ${processingTime}ms:`, error);
 
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
@@ -194,6 +193,15 @@ async function updateJobStatus(
   error?: string
 ) {
   try {
+    // Check if job exists first
+    const existingJob = await prisma.analysisJob.findUnique({
+      where: { id: jobId },
+    });
+    
+    if (!existingJob) {
+      return;
+    }
+    
     await prisma.analysisJob.update({
       where: { id: jobId },
       data: {
@@ -215,6 +223,15 @@ async function updateJobResult(
   scrapedText?: string
 ) {
   try {
+    // Check if job exists first
+    const existingJob = await prisma.analysisJob.findUnique({
+      where: { id: jobId },
+    });
+    
+    if (!existingJob) {
+      return;
+    }
+    
     await prisma.analysisJob.update({
       where: { id: jobId },
       data: {

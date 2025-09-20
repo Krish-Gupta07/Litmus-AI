@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.ts",
+    "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "build": "tsc",
-    "queue:worker": "ts-node --esm src/workers/analysis.worker.ts"
+    "worker": "tsx src/worker.ts",
+    "dev:worker": "tsx src/worker.ts",
+    "test:queue": "npm run build && node test-queue.js"
   },
   "keywords": [],
   "author": "",
