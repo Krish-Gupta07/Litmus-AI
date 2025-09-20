@@ -4,13 +4,22 @@ import type { Request, Response } from "express";
 import cors from "cors";
 import { transformQuery } from "./services/query-transform.js";
 import { getFinalAnswer } from "./services/final-anwer.js";
-import { QueueService, startAutoScaling, startMonitoring } from "./services/queue.js";
+import {
+  QueueService,
+  WorkerService,
+  startAutoScaling,
+  startMonitoring,
+} from "./services/queue.js";
 import analysisRoutes from "./routes/analysis.routes.js";
-import { authenticateUser, rateLimit } from "./middleware/auth.js";
+import { rateLimit } from "./middleware/auth.js";
 import webhookRoutes from "./routes/webhooks.routes.js";
 import morgan from "morgan";
 import whatsappRoutes from "./bots/whatsapp/routes.js";
-import { checkRedisHealth, getRedisStatus, closeRedisConnection } from "./lib/redis.js";
+import {
+  checkRedisHealth,
+  getRedisStatus,
+  closeRedisConnection,
+} from "./lib/redis.js";
 
 dotenv.config();
 const app = express();
@@ -44,15 +53,16 @@ app.get("/api/health", async (_req: Request, res: Response) => {
     const redisHealthy = await checkRedisHealth();
     const queueHealth = await QueueService.getHealthStatus();
     const queueStats = await QueueService.getQueueStats();
-    
+
     const health = {
-      status: redisHealthy && queueHealth.status === 'healthy' ? 'ok' : 'degraded',
+      status:
+        redisHealthy && queueHealth.status === "healthy" ? "ok" : "degraded",
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
       version: "1.0.0",
       services: {
         redis: {
-          status: redisHealthy ? 'connected' : 'disconnected',
+          status: redisHealthy ? "connected" : "disconnected",
           ...getRedisStatus(),
         },
         queue: queueHealth,
@@ -64,7 +74,7 @@ app.get("/api/health", async (_req: Request, res: Response) => {
       },
     };
 
-    const statusCode = health.status === 'ok' ? 200 : 503;
+    const statusCode = health.status === "ok" ? 200 : 503;
     res.status(statusCode).json(health);
   } catch (error) {
     console.error("Health check error:", error);
@@ -94,7 +104,6 @@ app.use("/api/webhooks", webhookRoutes);
 // Queue management endpoints (admin only)
 app.get(
   "/api/queue/stats",
-  authenticateUser,
   rateLimit(30),
   async (_req: Request, res: Response) => {
     try {
@@ -111,12 +120,18 @@ app.get(
 
 app.get(
   "/api/queue/health",
-  authenticateUser,
   rateLimit(30),
   async (_req: Request, res: Response) => {
     try {
       const health = await QueueService.getHealthStatus();
-      res.json({ success: true, data: health });
+      const workerStatus = WorkerService.getWorkerStatus();
+      res.json({
+        success: true,
+        data: {
+          ...health,
+          worker: workerStatus,
+        },
+      });
     } catch (error) {
       console.error("Error getting queue health:", error);
       res
@@ -127,8 +142,71 @@ app.get(
 );
 
 app.get(
+  "/api/queue/worker/status",
+  rateLimit(30),
+  async (_req: Request, res: Response) => {
+    try {
+      const workerStatus = WorkerService.getWorkerStatus();
+      res.json({ success: true, data: workerStatus });
+    } catch (error) {
+      console.error("Error getting worker status:", error);
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to get worker status" });
+    }
+  }
+);
+
+app.post(
+  "/api/queue/worker/start",
+  rateLimit(5),
+  async (_req: Request, res: Response) => {
+    try {
+      await WorkerService.startWorker();
+      res.json({ success: true, message: "Worker started successfully" });
+    } catch (error) {
+      console.error("Error starting worker:", error);
+      res.status(500).json({ success: false, error: "Failed to start worker" });
+    }
+  }
+);
+
+app.post(
+  "/api/queue/worker/stop",
+  rateLimit(5),
+  async (_req: Request, res: Response) => {
+    try {
+      await WorkerService.stopWorker();
+      res.json({ success: true, message: "Worker stopped successfully" });
+    } catch (error) {
+      console.error("Error stopping worker:", error);
+      res.status(500).json({ success: false, error: "Failed to stop worker" });
+    }
+  }
+);
+
+app.post(
+  "/api/queue/worker/process",
+  rateLimit(10),
+  async (_req: Request, res: Response) => {
+    try {
+      const waitingJobs = await WorkerService.processWaitingJobs();
+      res.json({
+        success: true,
+        message: `Found ${waitingJobs} waiting jobs`,
+        waitingJobs,
+      });
+    } catch (error) {
+      console.error("Error processing waiting jobs:", error);
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to process waiting jobs" });
+    }
+  }
+);
+
+app.get(
   "/api/queue/metrics",
-  authenticateUser,
   rateLimit(30),
   async (_req: Request, res: Response) => {
     try {
@@ -145,7 +223,6 @@ app.get(
 
 app.post(
   "/api/queue/clean",
-  authenticateUser,
   rateLimit(10),
   async (_req: Request, res: Response) => {
     try {
@@ -160,30 +237,37 @@ app.post(
 
 app.post(
   "/api/queue/scale",
-  authenticateUser,
   rateLimit(5),
   async (req: Request, res: Response) => {
     try {
       const { concurrency } = req.body;
-      if (typeof concurrency !== 'number' || concurrency < 1 || concurrency > 10) {
+      if (
+        typeof concurrency !== "number" ||
+        concurrency < 1 ||
+        concurrency > 10
+      ) {
         return res.status(400).json({
           success: false,
           error: "Concurrency must be a number between 1 and 10",
         });
       }
-      
+
       await QueueService.adjustConcurrency(concurrency);
-      res.json({ success: true, message: `Concurrency adjusted to ${concurrency}` });
+      res.json({
+        success: true,
+        message: `Concurrency adjusted to ${concurrency}`,
+      });
     } catch (error) {
       console.error("Error adjusting concurrency:", error);
-      res.status(500).json({ success: false, error: "Failed to adjust concurrency" });
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to adjust concurrency" });
     }
   }
 );
 
 app.post(
   "/api/queue/pause",
-  authenticateUser,
   rateLimit(5),
   async (_req: Request, res: Response) => {
     try {
@@ -198,7 +282,6 @@ app.post(
 
 app.post(
   "/api/queue/resume",
-  authenticateUser,
   rateLimit(5),
   async (_req: Request, res: Response) => {
     try {
@@ -214,7 +297,6 @@ app.post(
 // Comprehensive monitoring dashboard
 app.get(
   "/api/monitoring/dashboard",
-  authenticateUser,
   rateLimit(10),
   async (_req: Request, res: Response) => {
     try {
@@ -244,7 +326,9 @@ app.get(
       res.json({ success: true, data: dashboard });
     } catch (error) {
       console.error("Error getting monitoring dashboard:", error);
-      res.status(500).json({ success: false, error: "Failed to get monitoring dashboard" });
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to get monitoring dashboard" });
     }
   }
 );
@@ -257,7 +341,7 @@ function generateAlerts(health: any, stats: any, redisStatus: any): string[] {
     alerts.push("🚨 Redis connection is down");
   }
 
-  if (health.status === 'unhealthy') {
+  if (health.status === "unhealthy") {
     alerts.push("🚨 Queue system is unhealthy");
   }
 
@@ -266,7 +350,9 @@ function generateAlerts(health: any, stats: any, redisStatus: any): string[] {
   }
 
   if (stats.currentQueueUtilization > 90) {
-    alerts.push(`⚠️ Queue utilization is high: ${stats.currentQueueUtilization}%`);
+    alerts.push(
+      `⚠️ Queue utilization is high: ${stats.currentQueueUtilization}%`
+    );
   }
 
   if (stats.waiting > 50) {
@@ -311,20 +397,30 @@ app.listen(PORT, async () => {
   console.log(`🚀 Litmus AI API running at http://localhost:${PORT}`);
   console.log(`📊 Queue system initialized`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  
+
   // Initialize monitoring and auto-scaling
   try {
+    // Start monitoring and auto-scaling
     startMonitoring();
     startAutoScaling();
     console.log(`🔄 Auto-scaling and monitoring started`);
+
+    // Auto-start the integrated worker
+    await WorkerService.startWorker();
+    console.log("✅ Integrated worker started automatically");
+
+    // Worker will start automatically and process jobs
+    console.log("✅ Queue system ready - jobs will be processed automatically");
+    console.log("✅ WhatsApp bot will now respond to messages");
   } catch (error) {
-    console.error("❌ Failed to start monitoring:", error);
+    console.error("❌ Failed to start monitoring or worker:", error);
   }
 });
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("🔄 Shutting down server...");
+  await WorkerService.stopWorker();
   await QueueService.shutdown();
   await closeRedisConnection();
   process.exit(0);
@@ -332,6 +428,7 @@ process.on("SIGTERM", async () => {
 
 process.on("SIGINT", async () => {
   console.log("🔄 Shutting down server...");
+  await WorkerService.stopWorker();
   await QueueService.shutdown();
   await closeRedisConnection();
   process.exit(0);

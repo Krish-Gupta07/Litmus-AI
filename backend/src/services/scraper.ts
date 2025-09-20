@@ -155,7 +155,7 @@ async function scrapeWithPlaywright(
   url: string,
   locatorVar: string
 ): Promise<ScrapeResult> {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext();
     const page: Page = await context.newPage();
