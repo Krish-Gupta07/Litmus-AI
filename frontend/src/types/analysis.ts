@@ -1,26 +1,57 @@
-export interface AnalysisResponse {
-  analysis: {
-    jobId: number;
-    status: 'pending' | 'running' | 'completed' | 'failed';
-    result: {
-      title: string;
-      description: string;
-      credibilityScore?: number;
-      searchTopics: {
-        entities: string[];
-        concepts: string[];
-        claims: string[];
+// export interface AnalysisResponse {
+//   analysis: {
+//     jobId: number;
+//     status: 'pending' | 'running' | 'completed' | 'failed';
+//     result: {
+//       title: string;
+//       description: string;
+//       credibilityScore?: number;
+//       searchTopics: {
+//         entities: string[];
+//         concepts: string[];
+//         claims: string[];
+//       };
+//       ragQuestions: string;
+//     };
+//     scrapedText?: string;
+//   };
+//   failedReason?: string;
+//   metadata: {
+//     timestamp?: number;
+//     processedOn?: number;
+//     finishedOn?: number;
+//     timeToComplete?: number;
+//   };
+// }
+
+export interface AnalysisApiResponse {
+  success: boolean;
+  data: {
+    analysis: {
+      jobId: number;
+      status: 'pending' | 'running' | 'completed' | 'failed';
+      result: {
+        title: string;
+        description: string;
+        credibilityScore: number;
+        searchTopics: {
+          entities: string[];
+          concepts: string[];
+          claims: string[];
+        };
+        ragQuestions: string;
+        sources?: string[];
       };
-      ragQuestions: string;
+      scrapedText?: string;
     };
-    scrapedText?: string;
-  };
-  failedReason?: string;
-  metadata: {
-    timestamp?: number;
-    processedOn?: number;
-    finishedOn?: number;
-    timeToComplete?: number;
+    metadata: {
+      timestamp: number;
+      processedOn: number;
+      finishedOn: number;
+      timeToComplete: number;
+      state: string;
+      progress: number;
+    };
   };
 }
 
@@ -61,5 +92,6 @@ export interface JobsResponse {
   success: boolean;
   data: {
     jobs: Job[];
+    total: number;
   };
 }
