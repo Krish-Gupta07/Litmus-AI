@@ -9,9 +9,7 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "build": "tsc",
-    "worker": "tsx src/worker.ts",
-    "dev:worker": "tsx src/worker.ts",
-    "test:queue": "npm run build && node test-queue.js"
+    "resume-queue": "tsx src/scripts/resume-queue.ts"
   },
   "keywords": [],
   "author": "",
