@@ -1,7 +1,7 @@
 import express from "express";
 import type { Request, Response } from "express";
 import { scrape } from "../services/scraper.js";
-import webhookRoutes from './webhooks.routes.js';
+import webhookRoutes from "./webhooks.routes.js";
 
 const router = express.Router();
 
@@ -48,7 +48,6 @@ router.post("/analyze", async (req: Request, res: Response) => {
   }
 });
 
-// webhook routes
-router.use('/webhooks', webhookRoutes);
+router.use("/webhooks", webhookRoutes);
 
 export default router;
