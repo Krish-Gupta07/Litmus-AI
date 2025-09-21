@@ -25,7 +25,6 @@ export class WhatsAppHandler {
 
       console.log(`Received message from ${fromPhone}: ${messageText}`);
 
-      // Handle commands
       if (messageText.toLowerCase() === "/help") {
         await metaClient.sendTextMessage(fromPhone, templates.help);
         return;

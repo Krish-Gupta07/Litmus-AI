@@ -1,9 +1,8 @@
-import type { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import type { Request, Response, NextFunction } from "express";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Extend Express Request interface to include user
 declare global {
   namespace Express {
     interface Request {
@@ -15,31 +14,31 @@ declare global {
   }
 }
 
-/**
- * Authentication middleware
- * Verifies user exists and adds user info to request
- */
-export async function authenticateUser(req: Request, res: Response, next: NextFunction) {
+export async function authenticateUser(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    const userId = req.headers['x-user-id'] || req.body.userId || req.query.userId;
-    
+    const userId =
+      req.headers["x-user-id"] || req.body.userId || req.query.userId;
+
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User ID required',
-        message: 'Please provide user ID in headers, body, or query parameters',
+        error: "User ID required",
+        message: "Please provide user ID in headers, body, or query parameters",
       });
     }
 
-    if (typeof userId !== 'string') {
+    if (typeof userId !== "string") {
       return res.status(400).json({
         success: false,
-        error: 'Invalid user ID format',
-        message: 'Clerk user ID must be a string',
+        error: "Invalid user ID format",
+        message: "Clerk user ID must be a string",
       });
     }
-    
-    // Check if user exists in database
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -51,36 +50,34 @@ export async function authenticateUser(req: Request, res: Response, next: NextFu
     if (!user) {
       return res.status(404).json({
         success: false,
-        error: 'User not found',
+        error: "User not found",
       });
     }
 
-    // Add user info to request
     req.user = user;
     next();
-
   } catch (error) {
-    console.error('Authentication error:', error);
+    console.error("Authentication error:", error);
     return res.status(500).json({
       success: false,
-      error: 'Authentication failed',
+      error: "Authentication failed",
     });
   }
 }
 
-/**
- * Optional authentication middleware
- * Adds user info if provided, but doesn't require it
- */
-export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
+export async function optionalAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    const userId = req.headers['x-user-id'] || req.body.userId || req.query.userId;
-    
+    const userId =
+      req.headers["x-user-id"] || req.body.userId || req.query.userId;
+
     if (!userId) {
-      return next(); // Continue without user info
+      return next();
     }
 
-    // Check if user exists in database
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -94,21 +91,17 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
     }
 
     next();
-
   } catch (error) {
-    console.error('Optional authentication error:', error);
-    next(); // Continue even if auth fails
+    console.error("Optional authentication error:", error);
+    next();
   }
 }
 
-/**
- * Rate limiting middleware (basic implementation)
- */
 export function rateLimit(requestsPerMinute: number = 60) {
   const requests = new Map<string, { count: number; resetTime: number }>();
 
   return (req: Request, res: Response, next: NextFunction) => {
-    const userId = req.user?.id || req.ip || 'anonymous';
+    const userId = req.user?.id || req.ip || "anonymous";
     const now = Date.now();
     const windowMs = 60 * 1000; // 1 minute
 
@@ -123,7 +116,7 @@ export function rateLimit(requestsPerMinute: number = 60) {
     } else if (userRequests.count >= requestsPerMinute) {
       return res.status(429).json({
         success: false,
-        error: 'Rate limit exceeded',
+        error: "Rate limit exceeded",
         message: `Maximum ${requestsPerMinute} requests per minute allowed`,
         retryAfter: Math.ceil((userRequests.resetTime - now) / 1000),
       });
@@ -135,34 +128,31 @@ export function rateLimit(requestsPerMinute: number = 60) {
   };
 }
 
-/**
- * Admin authentication middleware
- */
-export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+export async function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    // First authenticate user
     await authenticateUser(req, res, (err) => {
       if (err) return next(err);
     });
 
-    // Check if user is admin (you can add an isAdmin field to your User model)
-    // For now, we'll use a simple check - you can modify this based on your needs
-    const isAdmin = Boolean(req.user?.email?.includes('admin'));
-    
+    const isAdmin = Boolean(req.user?.email?.includes("admin"));
+
     if (!isAdmin) {
       return res.status(403).json({
         success: false,
-        error: 'Admin access required',
+        error: "Admin access required",
       });
     }
 
     next();
-
   } catch (error) {
-    console.error('Admin authentication error:', error);
+    console.error("Admin authentication error:", error);
     return res.status(500).json({
       success: false,
-      error: 'Admin authentication failed',
+      error: "Admin authentication failed",
     });
   }
 }

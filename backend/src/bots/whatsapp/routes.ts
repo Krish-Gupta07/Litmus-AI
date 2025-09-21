@@ -9,7 +9,6 @@ whatsappRoutes.get("/webhook", (req: Request, res: Response) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  // Verify webhook
   if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
     console.log("WhatsApp webhook verified");
     res.status(200).send(challenge);
@@ -26,7 +25,6 @@ whatsappRoutes.post("/webhook", async (req: Request, res: Response) => {
       JSON.stringify(req.body, null, 2)
     );
 
-    // Process the message
     await WhatsAppHandler.handleMessage(req.body);
 
     res.status(200).send("OK");

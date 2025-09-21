@@ -11,7 +11,7 @@ import { processAnalysisJob } from "../workers/analysis.worker.js";
 export const QUEUE_NAME = "analysis-queue";
 const WORKER_CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || "2");
 const MAX_QUEUE_SIZE = parseInt(process.env.MAX_QUEUE_SIZE || "1000");
-const JOB_TIMEOUT = parseInt(process.env.JOB_TIMEOUT || "300000"); // 5 minutes
+const JOB_TIMEOUT = parseInt(process.env.JOB_TIMEOUT || "300000");
 const PRIORITY_LEVELS = {
   HIGH: 10,
   NORMAL: 5,
@@ -38,26 +38,16 @@ export const analysisQueue = new Queue<AnalysisJobData>(QUEUE_NAME, {
       type: "exponential",
       delay: 2000,
     },
-    removeOnComplete: 100, // Keep last 100 completed jobs
-    removeOnFail: 50, // Keep last 50 failed jobs
+    removeOnComplete: 100,
+    removeOnFail: 50,
     delay: 0,
   },
 });
 
-// Worker is now in separate process - see src/worker.ts
-// No worker needed here since it runs separately
-
-// Worker event handlers removed - worker runs in separate process
-
-// Global worker instance for integrated mode
 let integratedWorker: Worker<AnalysisJobData> | null = null;
 let autoResumeInterval: NodeJS.Timeout | null = null;
 
-// Worker management functions
 export class WorkerService {
-  /**
-   * Start the integrated worker within the main process
-   */
   static async startWorker(): Promise<void> {
     if (integratedWorker) {
       console.log("✅ Worker is already running");
@@ -86,7 +76,6 @@ export class WorkerService {
         }
       );
 
-      // Set up worker event handlers
       integratedWorker.on("ready", () => {
         console.log("✅ Integrated worker is ready to process jobs");
       });
@@ -112,7 +101,6 @@ export class WorkerService {
         console.error("❌ Integrated worker error:", error);
       });
 
-      // Start auto-resume functionality
       this.startAutoResume();
 
       console.log("✅ Integrated worker started successfully");
@@ -122,9 +110,6 @@ export class WorkerService {
     }
   }
 
-  /**
-   * Stop the worker gracefully
-   */
   static async stopWorker(): Promise<void> {
     if (!integratedWorker) {
       console.log("ℹ️ Worker is not running");
@@ -134,7 +119,6 @@ export class WorkerService {
     try {
       console.log("🔄 Stopping integrated worker...");
 
-      // Stop auto-resume
       this.stopAutoResume();
 
       await integratedWorker.close();
@@ -147,16 +131,10 @@ export class WorkerService {
     }
   }
 
-  /**
-   * Check if worker is running
-   */
   static isWorkerRunning(): boolean {
     return integratedWorker !== null;
   }
 
-  /**
-   * Get worker status
-   */
   static getWorkerStatus() {
     return {
       isRunning: this.isWorkerRunning(),
@@ -166,12 +144,9 @@ export class WorkerService {
     };
   }
 
-  /**
-   * Start auto-resume functionality
-   */
   static startAutoResume(): void {
     if (autoResumeInterval) {
-      return; // Already running
+      return;
     }
 
     console.log("🔄 Starting auto-resume functionality...");
@@ -192,9 +167,6 @@ export class WorkerService {
     console.log("✅ Auto-resume functionality started");
   }
 
-  /**
-   * Stop auto-resume functionality
-   */
   static stopAutoResume(): void {
     if (autoResumeInterval) {
       clearInterval(autoResumeInterval);
@@ -203,9 +175,6 @@ export class WorkerService {
     }
   }
 
-  /**
-   * Force process waiting jobs
-   */
   static async processWaitingJobs() {
     try {
       const waiting = await analysisQueue.getWaiting();
@@ -222,22 +191,16 @@ export class WorkerService {
 
       return 0;
     } catch (error) {
-      console.error("❌ Error processing waiting jobs:", error);
+      console.error("Error processing waiting jobs:", error);
       return 0;
     }
   }
 }
-
-// Queue management functions
 export class QueueService {
-  /**
-   * Add a new analysis job to the queue with overflow protection
-   */
   static async addJob(
     jobData: AnalysisJobData,
     options: QueueJobOptions = {}
   ): Promise<Job<AnalysisJobData>> {
-    // Check Redis health before adding job
     const isRedisHealthy = await checkRedisHealth();
     if (!isRedisHealthy) {
       throw new Error(
@@ -245,7 +208,6 @@ export class QueueService {
       );
     }
 
-    // Check queue size to prevent overflow
     const waiting = await analysisQueue.getWaiting();
     const active = await analysisQueue.getActive();
     const currentQueueSize = waiting.length + active.length;
@@ -256,7 +218,6 @@ export class QueueService {
       );
     }
 
-    // Determine priority based on user tier or job type
     const priority = this.determineJobPriority(jobData, options.priority);
 
     console.log(`📝 Adding job to queue with data:`, jobData);
@@ -269,20 +230,17 @@ export class QueueService {
         delay: 2000,
       },
     });
-    console.log(`✅ Job added to queue with ID: ${job.id}`);
+    console.log(`Job added to queue with ID: ${job.id}`);
 
     // Update queue size history
     queueMetrics.queueSizeHistory.push(currentQueueSize + 1);
     if (queueMetrics.queueSizeHistory.length > 100) {
-      queueMetrics.queueSizeHistory.shift(); // Keep only last 100 entries
+      queueMetrics.queueSizeHistory.shift();
     }
 
     return job as Job<AnalysisJobData>;
   }
 
-  /**
-   * Determine job priority based on various factors
-   */
   private static determineJobPriority(
     jobData: AnalysisJobData,
     userPriority?: number
@@ -291,13 +249,10 @@ export class QueueService {
       return Math.max(1, Math.min(10, userPriority));
     }
 
-    // Default priority logic
-    // WhatsApp users get higher priority
     if (jobData.userId && /^[\+\d]/.test(jobData.userId)) {
       return PRIORITY_LEVELS.HIGH;
     }
 
-    // URL jobs might be more urgent than text
     if (jobData.inputType === "url") {
       return PRIORITY_LEVELS.NORMAL;
     }
@@ -305,9 +260,6 @@ export class QueueService {
     return PRIORITY_LEVELS.LOW;
   }
 
-  /**
-   * Get job status and progress
-   */
   static async getJobStatus(jobId: string): Promise<any> {
     const job = await analysisQueue.getJob(jobId);
 
@@ -340,9 +292,6 @@ export class QueueService {
     };
   }
 
-  /**
-   * Get comprehensive queue statistics
-   */
   static async getQueueStats() {
     const waiting = await analysisQueue.getWaiting();
     const active = await analysisQueue.getActive();
@@ -356,21 +305,18 @@ export class QueueService {
       totalJobs > 0 ? (queueMetrics.totalJobsFailed / totalJobs) * 100 : 0;
 
     return {
-      // Queue counts
       waiting: waiting.length,
       active: active.length,
       completed: completed.length,
       failed: failed.length,
       total: waiting.length + active.length + completed.length + failed.length,
 
-      // Performance metrics
       totalJobsProcessed: queueMetrics.totalJobsProcessed,
       totalJobsFailed: queueMetrics.totalJobsFailed,
       failureRate: Math.round(failureRate * 100) / 100,
       averageProcessingTime: Math.round(queueMetrics.averageProcessingTime),
       lastProcessedAt: queueMetrics.lastProcessedAt,
 
-      // System health
       redisStatus,
       workerConcurrency: WORKER_CONCURRENCY,
       maxQueueSize: MAX_QUEUE_SIZE,
@@ -378,16 +324,12 @@ export class QueueService {
         ((waiting.length + active.length) / MAX_QUEUE_SIZE) * 100
       ),
 
-      // Recent history
-      queueSizeHistory: queueMetrics.queueSizeHistory.slice(-20), // Last 20 entries
+      queueSizeHistory: queueMetrics.queueSizeHistory.slice(-20),
       errorCount: queueMetrics.errorCount,
       lastErrorAt: queueMetrics.lastErrorAt,
     };
   }
 
-  /**
-   * Get detailed health status
-   */
   static async getHealthStatus() {
     const redisHealthy = await checkRedisHealth();
     const stats = await this.getQueueStats();
@@ -404,9 +346,6 @@ export class QueueService {
     return health;
   }
 
-  /**
-   * Get queue performance metrics
-   */
   static getPerformanceMetrics() {
     return {
       ...queueMetrics,
@@ -416,49 +355,29 @@ export class QueueService {
     };
   }
 
-  /**
-   * Clean up old jobs
-   */
   static async cleanOldJobs() {
     const completed = await analysisQueue.clean(
       24 * 60 * 60 * 1000,
       100,
       "completed"
-    ); // 24 hours
-    const failed = await analysisQueue.clean(24 * 60 * 60 * 1000, 50, "failed"); // 24 hours
-
-    // Jobs cleaned successfully
+    );
+    const failed = await analysisQueue.clean(24 * 60 * 60 * 1000, 50, "failed");
   }
 
-  /**
-   * Pause the queue
-   */
   static async pauseQueue() {
     await analysisQueue.pause();
   }
 
-  /**
-   * Resume the queue
-   */
   static async resumeQueue() {
     await analysisQueue.resume();
   }
 
-  /**
-   * Adjust worker concurrency dynamically
-   */
   static async adjustConcurrency(newConcurrency: number) {
     if (newConcurrency < 1 || newConcurrency > 10) {
       throw new Error("Concurrency must be between 1 and 10");
     }
-
-    // Note: BullMQ doesn't have updateConcurrency method in current version
-    // This would require recreating the worker with new concurrency
   }
 
-  /**
-   * Get optimal concurrency based on queue load
-   */
   static async getOptimalConcurrency(): Promise<number> {
     const stats = await this.getQueueStats();
     const queueLoad = stats.currentQueueUtilization;
@@ -472,9 +391,6 @@ export class QueueService {
     return WORKER_CONCURRENCY;
   }
 
-  /**
-   * Auto-scale workers based on queue load
-   */
   static async autoScale() {
     try {
       const optimalConcurrency = await this.getOptimalConcurrency();
@@ -486,21 +402,14 @@ export class QueueService {
     }
   }
 
-  /**
-   * Gracefully shutdown the queue
-   */
   static async shutdown() {
     try {
-      // Stop the worker first
       await WorkerService.stopWorker();
 
-      // Stop accepting new jobs
       await analysisQueue.pause();
 
-      // Wait for active jobs to complete (with timeout)
       const activeJobs = await analysisQueue.getActive();
       if (activeJobs.length > 0) {
-        // Wait up to 30 seconds for jobs to complete
         let waitTime = 0;
         const maxWaitTime = 30000;
         const checkInterval = 1000;
@@ -516,38 +425,33 @@ export class QueueService {
         }
       }
 
-      // Close queue
       await analysisQueue.close();
     } catch (error) {
-      console.error("❌ Error during queue shutdown:", error);
-      // Force close if graceful shutdown fails
+      console.error("Error during queue shutdown:", error);
       try {
         analysisQueue.close();
       } catch (forceError) {
-        console.error("❌ Force close failed:", forceError);
+        console.error("Force close failed:", forceError);
       }
     }
   }
 }
 
-// Auto-scaling and monitoring intervals
 let autoScaleInterval: NodeJS.Timeout | null = null;
 let monitoringInterval: NodeJS.Timeout | null = null;
 
-// Start auto-scaling (every 2 minutes)
 export function startAutoScaling() {
-  if (autoScaleInterval) return; // Already started
+  if (autoScaleInterval) return;
 
   autoScaleInterval = setInterval(async () => {
     try {
       await QueueService.autoScale();
     } catch (error) {
-      console.error("❌ Auto-scaling error:", error);
+      console.error("Auto-scaling error:", error);
     }
-  }, 2 * 60 * 1000); // 2 minutes
+  }, 2 * 60 * 1000);
 }
 
-// Stop auto-scaling
 export function stopAutoScaling() {
   if (autoScaleInterval) {
     clearInterval(autoScaleInterval);
@@ -555,9 +459,8 @@ export function stopAutoScaling() {
   }
 }
 
-// Start monitoring (every 30 seconds)
 export function startMonitoring() {
-  if (monitoringInterval) return; // Already started
+  if (monitoringInterval) return;
 
   monitoringInterval = setInterval(async () => {
     try {
@@ -565,14 +468,12 @@ export function startMonitoring() {
       const stats = await QueueService.getQueueStats();
       const workerStatus = WorkerService.getWorkerStatus();
 
-      // Log health status
       if (health.status === "unhealthy") {
         console.warn(
           `🚨 System unhealthy: Redis=${health.redis}, Queue=${health.queue}, Workers=${health.workers}, Errors=${health.errors}`
         );
       }
 
-      // Check worker status
       if (!workerStatus.isRunning) {
         try {
           await WorkerService.startWorker();
@@ -581,7 +482,6 @@ export function startMonitoring() {
         }
       }
 
-      // Alert on high queue utilization
       if (stats.currentQueueUtilization > 90) {
         console.warn(
           `🚨 High queue utilization: ${stats.currentQueueUtilization}%`
@@ -590,10 +490,9 @@ export function startMonitoring() {
     } catch (error) {
       console.error("❌ Monitoring error:", error);
     }
-  }, 30 * 1000); // 30 seconds
+  }, 30 * 1000);
 }
 
-// Stop monitoring
 export function stopMonitoring() {
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
@@ -601,7 +500,6 @@ export function stopMonitoring() {
   }
 }
 
-// Graceful shutdown handling
 process.on("SIGTERM", async () => {
   stopAutoScaling();
   stopMonitoring();

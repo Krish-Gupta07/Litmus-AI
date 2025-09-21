@@ -1,14 +1,12 @@
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
 
-// Redis connection
 const redis = new Redis({
   host: process.env.REDIS_HOST || "localhost",
   port: parseInt(process.env.REDIS_PORT || "6379"),
   maxRetriesPerRequest: 3,
 });
 
-// Analysis queue
 const analysisQueue = new Queue("analysis", {
   connection: redis,
 });

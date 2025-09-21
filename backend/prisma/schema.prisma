@@ -44,6 +44,7 @@ model User {
 // This table now serves as your primary data store AND your cache.
 model AnalysisJob {
   id          String    @id @default(cuid())
+  queueJobId  String?
   status      JobStatus @default(PENDING)
   input       String    @db.Text
   scrapedText String?   @db.Text
