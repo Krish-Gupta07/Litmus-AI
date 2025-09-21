@@ -78,7 +78,7 @@ export function AppSidebar() {
       return;
      }
 
-     setAnalysis(response.data.jobs);
+     setAnalysis(response.data.data.jobs);
      setLoading(false);
     };
 
