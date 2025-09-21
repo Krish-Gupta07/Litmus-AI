@@ -330,6 +330,12 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
             </div>
           </div>
         )}
+
+        <div className="text-center py-4">
+          <p className="text-xs text-muted-foreground">
+            Please cross-check results with reliable sources for verification
+          </p>
+        </div>
       </div>
     </div>
   )
