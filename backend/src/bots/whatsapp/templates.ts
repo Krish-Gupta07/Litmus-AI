@@ -5,8 +5,8 @@ To fact-check any content, start your message with:
 */litmus* followed by your text or news article link
 
 📝 *Examples:*
-*/litmus Bitcoin will reach $100k by 2025*
-*/litmus https://timesofindia.indiatimes.com/business/india-business/india-to-become-worlds-3rd-largest-economy-by-2030/articleshow/98765432.cms*
+/litmus Bitcoin will reach $100k by 2025
+/litmus https://timesofindia.indiatimes.com/business/india-business/india-to-become-worlds-3rd-largest-economy-by-2030/articleshow/98765432.cms
 
 📋 *Commands:*
 • */help* - Show this guide
