@@ -46,6 +46,8 @@ export default function Home() {
       return;
     }
 
+    // window.dispatchEvent(new CustomEvent('new-analysis-created'))
+    // localStorage.setItem('new-analysis-created', Date.now().toString())
     toast.success('Analysis job queued successfully.');
     router.push(`/chat/${response.data.data.jobId}`);
 

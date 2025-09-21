@@ -1,4 +1,4 @@
-'use client';
+"use client"
 
 import {
   Sidebar,
@@ -13,28 +13,28 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
   useSidebar,
-} from '@/components/ui/sidebar';
-import Link from 'next/link';
-import { CommandIcon, SearchIcon, LogInIcon, PlusIcon, Loader2Icon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
-import { Button } from './ui/button';
-import Logo from '../../public/icons/logo';
-import { useRouter } from 'next/navigation';
-import SidebarChatCard from './sidebar-chat-card';
-import { getApi } from '@/helpers/api';
-import { apiEndPoints } from '@/helpers/apiEndpoints';
-import { AnalysisData, Job } from '@/types/analysis';
+} from "@/components/ui/sidebar"
+import Link from "next/link"
+import { CommandIcon, SearchIcon, LogInIcon, PlusIcon, Loader2Icon } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/nextjs"
+import { Button } from "./ui/button"
+import Logo from "../../public/icons/logo"
+import { useRouter } from "next/navigation"
+import SidebarChatCard from "./sidebar-chat-card"
+import { getApi } from "@/helpers/api"
+import { apiEndPoints } from "@/helpers/apiEndpoints"
+import type { Job } from "@/types/analysis"
 
 export function AppSidebar() {
-  const router = useRouter();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { user } = useUser();
-  const { isMobile, setOpen, setOpenMobile } = useSidebar();
-  const [analysis, setAnalysis] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter()
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const { user } = useUser()
+  const { isMobile, setOpen, setOpenMobile } = useSidebar()
+  const [analysis, setAnalysis] = useState<Job[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // const filteredAnalysis = analysis.filter((item) => {
   //   if (!searchQuery) return true;
@@ -50,40 +50,41 @@ export function AppSidebar() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-        event.preventDefault();
-        searchInputRef.current?.focus();
+      if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+        event.preventDefault()
+        searchInputRef.current?.focus()
       }
-    };
+    }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) return
 
     const fetchAnalysis = async () => {
-      setLoading(true);
-      const response = await getApi(
-        apiEndPoints.analysis.jobs(user.id),
-      );
+      setLoading(true)
+      const response = await getApi(apiEndPoints.analysis.jobs(user.id))
 
-      console.log(response.data);
-      setLoading(false);
+      console.log(response.data)
 
-     if (response.status !== 200) {
-      setError('Failed to fetch analysis');
-      setLoading(false);
-      return;
-     }
+      if (response.status !== 200) {
+        setError("Failed to fetch analysis")
+        setLoading(false)
+        return
+      }
 
-     setAnalysis(response.data.data.jobs);
-     setLoading(false);
-    };
+      if (response.data?.success && response.data?.data?.jobs) {
+        setAnalysis(response.data.data.jobs)
+      } else {
+        setAnalysis([])
+      }
+      setLoading(false)
+    }
 
-    fetchAnalysis();
-  }, [user?.id]);
+    fetchAnalysis()
+  }, [user?.id])
 
   return (
     <Sidebar>
@@ -105,11 +106,11 @@ export function AppSidebar() {
                 variant="outline"
                 onClick={() => {
                   if (isMobile) {
-                    setOpenMobile(false);
+                    setOpenMobile(false)
                   } else {
-                    setOpen(false);
+                    setOpen(false)
                   }
-                  router.push('/');
+                  router.push("/")
                 }}
               >
                 <PlusIcon size={16} />
@@ -129,10 +130,7 @@ export function AppSidebar() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <SearchIcon
-                  size={16}
-                  className="text-muted-foreground absolute top-1/2 left-2 -translate-y-1/2"
-                />
+                <SearchIcon size={16} className="text-muted-foreground absolute top-1/2 left-2 -translate-y-1/2" />
                 <div className="absolute top-1/2 right-2 -translate-y-1/2">
                   <kbd className="bg-muted text-muted-foreground flex items-center rounded px-2 py-0.5 font-mono text-xs">
                     <CommandIcon size={10} className="mr-1" />K
@@ -164,9 +162,7 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                       <div className="py-8 text-center">
                         <SearchIcon size={32} className="text-muted-foreground mx-auto mb-2" />
-                        <p className="text-muted-foreground text-sm">
-                          No results found for "{searchQuery}"
-                        </p>
+                        <p className="text-muted-foreground text-sm">No results found for "{searchQuery}"</p>
                       </div>
                     </SidebarMenuItem>
                   )}
@@ -185,9 +181,7 @@ export function AppSidebar() {
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-medium">Login to store history</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Sign in to save and access your analysis history
-                  </p>
+                  <p className="text-muted-foreground text-sm">Sign in to save and access your analysis history</p>
                 </div>
                 <SignInButton>
                   <Button className="flex items-center gap-2">
@@ -208,9 +202,9 @@ export function AppSidebar() {
               <div className="flex items-center gap-2 px-2 py-1">
                 <UserButton />
                 <div className="flex flex-col text-sm font-medium">
-                  <span className="truncate">{user?.fullName || 'User'}</span>
+                  <span className="truncate">{user?.fullName || "User"}</span>
                   <span className="text-muted-foreground truncate text-xs">
-                    {user?.emailAddresses[0].emailAddress || 'User'}
+                    {user?.emailAddresses[0].emailAddress || "User"}
                   </span>
                 </div>
               </div>
@@ -219,5 +213,5 @@ export function AppSidebar() {
         </SidebarFooter>
       </SignedIn>
     </Sidebar>
-  );
+  )
 }

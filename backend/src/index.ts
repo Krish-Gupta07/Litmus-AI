@@ -44,6 +44,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options(/(.*)/, cors(corsOptions));
 // app.use(express.raw({ type: 'application/json' }));
+app.use("/api/webhooks", express.raw({ type: "application/json" }), webhookRoutes);
 app.use(express.json());
 app.use(morgan("dev"));
 
@@ -99,7 +100,6 @@ app.use("/api/analysis", analysisRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 
 // webhook routes
-app.use("/api/webhooks", webhookRoutes);
 
 // Queue management endpoints (admin only)
 app.get(
