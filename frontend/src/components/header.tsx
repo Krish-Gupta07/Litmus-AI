@@ -4,7 +4,6 @@ import { UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import Logo from '../../public/icons/logo';
 import { SidebarTrigger } from './ui/sidebar';
-import { Sidebar } from './ui/sidebar';
 
 // interface Props {
 //   onNewChat: () => void;
@@ -12,7 +11,7 @@ import { Sidebar } from './ui/sidebar';
 
 export default function Header() {
   return (
-    <header className="h-16 w-full gap-4 space-x-4 py-4">
+    <header className="h-16 w-full gap-4 space-x-4 py-4 z-50">
       <div className="flex items-center justify-between">
         {/* <button
           onClick={onNewChat}

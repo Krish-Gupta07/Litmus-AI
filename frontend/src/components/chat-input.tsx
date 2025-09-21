@@ -3,7 +3,7 @@
 import type React from 'react';
 
 import { useState, useRef, useEffect } from 'react';
-import { InfoIcon, LinkIcon, Loader2, TypeIcon } from 'lucide-react';
+import { ArrowUp, InfoIcon, LinkIcon, Loader2, SendIcon, TypeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -92,7 +92,7 @@ export default function ChatInput({
         <h1 className="flex items-center gap-2 font-medium">
           <TypeIcon size={16} className="text-accent" /> Analyze Content for Misinformation
         </h1>
-        <div className="my-2 flex w-fit items-center gap-2 rounded-xl bg-primary-foreground p-1">
+        <div className="bg-primary-foreground my-2 flex w-fit items-center gap-2 rounded-xl p-1">
           <button
             className={cn(
               'flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-colors duration-300',
@@ -127,7 +127,7 @@ export default function ChatInput({
           disabled={disabled || isLoading}
           maxLength={maxLength}
           className={cn(
-            'text-foreground placeholder:text-muted-foreground w-full resize-none rounded-xl border-0 bg-primary-foreground p-4',
+            'text-foreground placeholder:text-muted-foreground bg-primary-foreground w-full resize-none rounded-xl border-0 p-4',
             'focus:ring-0 focus:outline-none',
             'text-sm leading-relaxed',
           )}
@@ -136,8 +136,8 @@ export default function ChatInput({
         />
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="mt-2 flex items-center justify-end gap-3">
+        {/* <div className="flex items-center gap-2">
           <Checkbox
             id="cache-mode"
             checked={false}
@@ -152,7 +152,7 @@ export default function ChatInput({
             Use cached results
             <InfoIcon size={16} className="text-muted-foreground" />
           </Label>
-        </div>
+        </div> */}
 
         <div className="flex items-center gap-3">
           {message.length > maxLength * 0.8 && (
@@ -177,7 +177,13 @@ export default function ChatInput({
             )}
             aria-label="Send message"
           >
-            {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'Analyze Content'}
+            {isLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <div className="flex items-center gap-2">
+                <ArrowUp size={18} /> <p>Analyze</p>
+              </div>
+            )}
           </Button>
         </div>
       </div>

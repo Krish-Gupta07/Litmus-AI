@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { postApi } from '@/helpers/api';
 import { useUser } from '@clerk/nextjs';
 import { toast } from 'sonner';
+import ShinyText from '@/components/common/shiny-text';
+import LightRays from '@/components/common/light-rays';
 
 interface IPayload {
   url?: string;
@@ -40,7 +42,10 @@ export default function Home() {
     const response = await postApi('/api/analysis/analyze', payload);
 
     if (response.status !== 202) {
-      console.error('Failed to queue analysis job:', { response: response.data, status: response.status });
+      console.error('Failed to queue analysis job:', {
+        response: response.data,
+        status: response.status,
+      });
       toast.error('Failed to queue analysis job.');
       setIsLoading(false);
       return;
@@ -56,7 +61,23 @@ export default function Home() {
 
   return (
     <main className="bg-background flex min-h-[91vh] flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center p-4">
+      <div
+        style={{ width: '100%', height: '100vh', position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+        className='pointer-events-none'
+      >
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#000"
+          raysSpeed={1.5}
+          lightSpread={0.8}
+          rayLength={1.2}
+          followMouse={true}
+          mouseInfluence={0.05}
+          noiseAmount={0.1}
+          distortion={0.05}
+        />
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center p-4 z-10">
         <div className="w-full max-w-2xl space-y-8">
           <div className="space-y-2 text-center">
             <h1 className="text-foreground text-5xl font-medium">Litmus AI</h1>
