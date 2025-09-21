@@ -25,7 +25,15 @@ export default function SidebarChatCard({ analysis }: { analysis: Job }) {
   const { isMobile, setOpen, setOpenMobile } = useSidebar();
   
   // Parse the result if it's a string
-  const parsedResult = analysis.result ? JSON.parse(analysis.result) : null;
+  // const parsedResult = analysis.result ? JSON.parse(analysis.result) : null;
+  
+  let parsedResult = null;
+  try {
+    parsedResult = analysis.result ? JSON.parse(analysis.result) : null;
+  } catch (error) {
+    console.error('Failed to parse analysis result:', error);
+    parsedResult = null;
+  }
   
   // Determine the status display
   const getStatusDisplay = () => {

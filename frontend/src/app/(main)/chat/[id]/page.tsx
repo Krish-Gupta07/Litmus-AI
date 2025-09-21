@@ -19,7 +19,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { getApi } from "@/helpers/api"
 import { apiEndPoints } from "@/helpers/apiEndpoints"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { toast } from "sonner"
 import Loading from "@/components/common/loading"
 import { AnalysisLoading } from "./analysis-loading"
@@ -33,7 +33,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
   const [error, setError] = useState<string | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const fetchAnalysis = async () => {
+  const fetchAnalysis = useCallback(async () => {
     try {
       const response = await getApi(`${apiEndPoints.analysis.status(jobId)}`)
 
@@ -63,7 +63,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       setError("Failed to fetch analysis data")
       setIsLoading(false)
     }
-  }
+  }, [jobId])
 
   const startPolling = () => {
     if (pollingIntervalRef.current) {
@@ -305,10 +305,9 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                     rel="noopener noreferrer"
                     className="flex-1 text-xs sm:text-sm hover:text-primary transition-colors truncate"
                   >
-                    {source.length > (window.innerWidth < 640 ? 40 : 80) ? 
-                      source.slice(0, window.innerWidth < 640 ? 40 : 80) + "..." : 
-                      source
-                    }
+                    <span className="truncate block sm:max-w-[40ch] lg:max-w-[80ch]">
+                        {source}
+                    </span>
                   </a>
                 </div>
               ))}
